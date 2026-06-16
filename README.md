@@ -34,6 +34,10 @@ means &#36;60,000 of today's buying power, no matter how far in the future.
 The balance &#215; age heatmap is the one exception: its Y-axis is in *nominal*
 dollars so you can read your actual account balance off the chart.
 
+For the full mathematical derivations, justification of every modeling choice,
+discussion of limitations, and citations to the academic literature, see
+[**THEORY.md**](THEORY.md).
+
 ## Running locally
 
 **Jupyter Lab** (editable, code visible):
@@ -59,8 +63,8 @@ the image isn't cached.
 
 This is a planning aid, not financial advice. The model makes significant
 simplifications — no taxes, no per-account modeling, constant real spending,
-normal-distribution returns. See the **Notes & Caveats** section in the
-notebook for a full list of limitations and suggested extensions.
+normal-distribution returns. See [THEORY.md](THEORY.md) for a full discussion
+of limitations and suggested extensions.
 
 ## License
 
