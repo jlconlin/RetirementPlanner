@@ -6,10 +6,13 @@ running Monte Carlo stress tests against market variability.
 
 ## Conventions
 
-- **All dollar amounts are in today's dollars (real terms).** Returns,
-  expenses, savings, and Social Security figures should all be entered as
-  inflation-adjusted (real) values. Do not introduce a separate inflation
-  rate unless the whole model is reworked to be nominal.
+- **Dollar amounts are in today's dollars.** Expenses, savings, and Social
+  Security figures are entered in today's purchasing power.
+- **Returns are entered as nominal rates** (what you see on a brokerage
+  website). The `w_inflation_rate` widget holds the assumed long-run
+  inflation rate; `build_assumptions_from_widgets()` converts nominal →
+  real via the Fisher equation before passing values to the projection
+  functions. All projected balances are displayed in today's dollars.
 - **Age is derived from `birth_year`**, not hardcoded. The assumptions cell
   computes `current_age` from `birth_year` and the current date so the
   notebook stays accurate without manual edits each time it's opened.
