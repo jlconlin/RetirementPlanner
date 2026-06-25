@@ -113,7 +113,8 @@ cycles where portfolio survived to the end year).
 
 ### Limitations of cFIREsim for comparison
 
-- Spouse modeling is approximate (no survivor benefit logic)
+- Spouse modeling is approximate; this notebook includes a simplified survivor
+  benefit rule, but cFIREsim generally requires separate income entries
 - Historical data is U.S.-centric; international diversification is not
   separately modeled
 - The implied average real return from historical data (~5–7% for stocks,

@@ -18,21 +18,18 @@ portfolio balance, earliest retirement age, and Monte Carlo success rate.
   probability your plan survives market variability
 - **Success rate sweep** — plots success rate across a range of retirement ages
 - **Balance &#215; age heatmap** — shows the portfolio balance you need at each
-  retirement age to hit a given success rate (in nominal dollars, so you can
-  compare directly to your account statements)
+  retirement age to hit a given success rate, in today's dollars
 
 ## Modeling choices
 
 **Everything is in today's dollars (real terms).** Enter expenses, savings,
-contributions, and Social Security in today's purchasing power. Enter rates of
-return as *nominal* values — the model converts them to real using your
-specified inflation rate via `(1 + nominal) / (1 + inflation) - 1`.
+contributions, and Social Security in today's purchasing power. Contribution
+growth is a real growth rate above inflation. Enter rates of return as
+*nominal* values — the model converts them to real using your specified
+inflation rate via `(1 + nominal) / (1 + inflation) - 1`.
 
 This keeps every dollar amount intuitive: "&#36;60,000/year expenses" always
 means &#36;60,000 of today's buying power, no matter how far in the future.
-
-The balance &#215; age heatmap is the one exception: its Y-axis is in *nominal*
-dollars so you can read your actual account balance off the chart.
 
 For the full mathematical derivations, justification of every modeling choice,
 discussion of limitations, and citations to the academic literature, see

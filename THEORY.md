@@ -25,7 +25,7 @@ This document describes the mathematical foundations of the retirement planner, 
 
 ## 1. Input Parameter Reference
 
-This section describes every input parameter in the dashboard, gives recommended ranges, and explains how to calibrate each one to your situation. All dollar figures are in **today's dollars** (real terms); all return and growth rates are entered as **nominal** percentages.
+This section describes every input parameter in the dashboard, gives recommended ranges, and explains how to calibrate each one to your situation. All dollar figures are in **today's dollars** (real terms). Investment returns are entered as **nominal** percentages and converted to real returns internally. Contribution growth is entered as a **real** percentage above inflation.
 
 ### Quick Reference
 
@@ -36,7 +36,7 @@ This section describes every input parameter in the dashboard, gives recommended
 | Life expectancy | 90 | 80–100 | 1.1 |
 | Current savings ($k) | 250 | 0–10,000+ | 1.2 |
 | Annual contribution ($k) | 15 | 0–150 | 1.2 |
-| Contribution growth (%) | 2.0 | 0–5 | 1.2 |
+| Contribution growth, real (%) | 2.0 | 0–5 | 1.2 |
 | Inflation (%) | 2.5 | 2.0–4.0 | 1.3 |
 | Pre-ret. nominal return (%) | 7.0 | 5–12 | 1.3 |
 | Post-ret. nominal return (%) | 5.0 | 3–8 | 1.3 |
@@ -90,23 +90,22 @@ The combined value of all investable assets today — 401(k), IRA, Roth IRA, tax
 **Annual contribution ($k)**
 The total amount added to the portfolio each year across all accounts, in thousands. Include both your own contributions and any employer match. If contributions vary year to year, use your best estimate of the near-term average.
 
-2025 contribution limits (approximate):
+2026 contribution limits:
 
 | Account type | Annual limit |
 |---|---|
-| 401(k) / 403(b) employee contribution | $23,500 |
-| 401(k) catch-up (age 50–59, 64+) | +$7,500 |
+| 401(k) / 403(b) / governmental 457 / TSP employee contribution | $24,500 |
+| 401(k) catch-up (age 50–59, 64+) | +$8,000 |
 | 401(k) catch-up (age 60–63, SECURE 2.0) | +$11,250 |
-| IRA (traditional or Roth) | $7,000 |
-| IRA catch-up (age 50+) | +$1,000 |
+| IRA (traditional or Roth) | $7,500 |
+| IRA catch-up (age 50+) | +$1,100 |
 
-**Contribution growth (%)**
-The annual nominal rate at which your contribution grows. A value of 2% means annual savings increase 2% per year in nominal terms; at 2.5% inflation this represents roughly −0.5% real growth (essentially flat).
+**Contribution growth, real (%)**
+The annual real rate at which your contribution grows above inflation. A value of 0% means your nominal savings increase with inflation and maintain the same purchasing power. A value of 2% means your annual savings rise 2% faster than inflation.
 
 | Scenario | Suggested value |
 |---|---|
-| Fixed dollar amount year over year | 0% |
-| Savings grow with inflation only | 2–3% (match your inflation assumption) |
+| Savings grow with inflation only | 0% |
 | Modest salary growth with rising savings rate | 2–4% |
 | Aggressive career growth / rapidly increasing savings | 4–6% |
 
@@ -247,7 +246,7 @@ A model running in **real terms** avoids this entirely. Every number retains its
 
 This approach is standard in long-horizon financial planning [2, 3] and is consistent with how Social Security Administration benefit estimates are reported (in today's dollars, using the "wage-indexed" methodology).
 
-The **one exception** in this model is the Balance × Age success-rate grid (Section 10), which displays the Y-axis in *nominal* dollars so that users can compare directly to their brokerage account statements.
+The Balance × Age success-rate grid (Section 10) also uses today's dollars. If you want to compare it with a future brokerage statement, first deflate that future nominal balance back to today's purchasing power.
 
 ---
 
@@ -323,6 +322,8 @@ Social Security retirement benefits are a function of the recipient's earnings h
 The break-even age for delayed claiming (67 vs. 70) is approximately 82–83, meaning those who expect to live past that age generally benefit from delaying [8]. The model takes the monthly benefit as a user input for the chosen claiming age; the Social Security Administration provides personalised estimates at [ssa.gov/myaccount](https://ssa.gov/myaccount).
 
 All Social Security amounts in the model are in **today's dollars**. In reality, benefits are adjusted annually by the **Cost-of-Living Adjustment** (COLA), which approximately tracks CPI-W. In a real-terms model, this adjustment is implicit: a constant real benefit is equivalent to a CPI-adjusted nominal benefit.
+
+When spouse modeling is enabled, the notebook approximates survivor benefits by keeping the higher active benefit after the first death. The deceased spouse's benefit is treated as available only if it had started before death. This is deliberately simpler than Social Security's actual survivor rules, which depend on the survivor's age, the deceased worker's claiming history, and early-claiming reductions.
 
 ### Pension Income
 
@@ -469,15 +470,15 @@ The deterministic projection and Monte Carlo sweep both take **retirement age** 
 
 The Balance × Age grid answers this directly. It sweeps a two-dimensional grid of (retirement age, portfolio balance at retirement) pairs, computes the Monte Carlo success rate for each cell, and displays the result as a heatmap. The user finds their projected account balance on the Y-axis, their target retirement age on the X-axis, and reads off the success probability.
 
-### Nominal Dollar Y-Axis
+### Real Dollar Y-Axis
 
-The Y-axis of the heatmap is in **nominal dollars** — the value your brokerage account will actually display at retirement — rather than today's dollars. This is the one place in the model where nominal values appear, and it is deliberate.
+The Y-axis of the heatmap is in **today's dollars**, matching the rest of the model. This lets the grid use the same spending, Social Security, pension, and return assumptions as the deterministic and Monte Carlo projections.
 
-The conversion from nominal to real is:
+To compare a future brokerage statement to the grid, convert that future nominal balance to today's dollars:
 
 $$B_{\text{real}} = \frac{B_{\text{nominal}}}{(1 + r_{\text{inflation}})^{T - t_0}}$$
 
-where $T - t_0$ is the number of years until retirement. The simulation internally uses $B_{\text{real}}$ for all calculations; the nominal label is purely for readability.
+where $T - t_0$ is the number of years until retirement. For example, a $1,000,000 account balance ten years from now is about $781,000 in today's dollars at 2.5% inflation.
 
 ### Interpreting the Contours
 
