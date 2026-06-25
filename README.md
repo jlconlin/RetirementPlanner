@@ -1,8 +1,8 @@
 # Retirement Planner
 
-A self-contained, interactive retirement planning notebook. Adjust your
-assumptions in a live sidebar and instantly see how they affect your projected
-portfolio balance, earliest retirement age, and Monte Carlo success rate.
+A personal retirement planning dashboard. Adjust assumptions with sliders,
+review deterministic and Monte Carlo results, inspect retirement-age sweeps,
+and save or load scenario JSON files.
 
 [![Launch on Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/jlconlin/RetirementPlanner/HEAD?urlpath=voila%2Frender%2Fretirement_planner.ipynb)
 
@@ -10,6 +10,8 @@ portfolio balance, earliest retirement age, and Monte Carlo success rate.
 
 ## Features
 
+- **Streamlit dashboard** — grouped assumptions, headline metrics, tabbed
+  results, scenario download/upload, and contextual input help
 - **Deterministic projection** — year-by-year portfolio balance under constant
   assumed returns, updating live as you adjust inputs
 - **Earliest retirement age** — finds the youngest age at which your portfolio
@@ -19,6 +21,8 @@ portfolio balance, earliest retirement age, and Monte Carlo success rate.
 - **Success rate sweep** — plots success rate across a range of retirement ages
 - **Balance &#215; age heatmap** — shows the portfolio balance you need at each
   retirement age to hit a given success rate, in today's dollars
+- **Tested calculation engine** — core math lives in `retirement_model.py` and
+  is covered by regression tests
 
 ## Modeling choices
 
@@ -37,24 +41,38 @@ discussion of limitations, and citations to the academic literature, see
 
 ## Running locally
 
+**Streamlit** (recommended):
+```
+pip install -r requirements.txt
+streamlit run app.py
+```
+
 **Jupyter Lab** (editable, code visible):
 ```
 pip install -r requirements.txt
 jupyter lab retirement_planner.ipynb
 ```
 
-**Voilà** (clean dashboard, code hidden):
+**Voilà** (legacy notebook dashboard):
 ```
 pip install -r requirements.txt
 voila retirement_planner.ipynb
 ```
 
+## Testing
+
+```
+pytest
+```
+
+The tests cover unit conversion, deterministic projections, contribution
+growth, spending curves, survivor Social Security behavior, Monte Carlo
+baselines, success grids, and summary calculations.
+
 ## Running on Binder / iPad
 
-Click the **Launch on Binder** badge above. Binder builds a container and
-serves the notebook as a Voilà dashboard — no local installation required,
-works in any browser including iPad Safari. Cold starts take 1–2 minutes if
-the image isn't cached.
+Click the **Launch on Binder** badge above to run the older Voilà notebook
+dashboard. The Streamlit app is now the primary local interface.
 
 ## Disclaimer
 
