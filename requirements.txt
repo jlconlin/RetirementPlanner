@@ -1,5 +1,7 @@
-numpy
+numpy>=1.21.5,<1.22
 pandas
 matplotlib
 ipywidgets
 voila
+streamlit>=1.20,<1.24
+pytest
