@@ -39,121 +39,180 @@ st.set_page_config(
 )
 
 
-HELP_TEXT = {
-    "Current age": (
-        "Your age today — the starting point for all projections.<br><br>"
-        "<b>Range:</b> 18–90<br>"
-        "<i>Theory tab → §1.1</i>"
-    ),
-    "Life expectancy": (
-        "How long the plan must stay solvent. Use a <b>conservative</b> (longer) value — "
-        "outliving your money is catastrophic; a surplus is not.<br><br>"
-        "<b>Conservative individual planning target:</b> 90–95<br>"
-        "<b>Couples: ~50% chance one survives to 90</b><br>"
-        "<b>Median US male at 65:</b> 84 &nbsp;|&nbsp; <b>Female:</b> 87<br>"
-        "<i>Theory tab → §1.1</i>"
-    ),
-    "Target retirement age": (
-        "Age at which contributions stop and portfolio withdrawals begin.<br><br>"
-        "<b>Key ages:</b> 55 (Rule of 55), 59½ (penalty-free withdrawals), "
-        "62 (earliest SS), 65 (Medicare), 67 (SS Full Retirement Age), 70 (max SS benefit)<br>"
-        "<i>Theory tab → §1.1</i>"
-    ),
-    "Current savings": (
-        "Total investable assets today in thousands of today's dollars. "
-        "Include 401(k), IRA, and brokerage. Exclude home equity unless you plan to liquidate it.<br><br>"
-        "<b>4% rule implied portfolio target:</b> 25× annual expenses<br>"
-        "<i>Theory tab → §1.2</i>"
-    ),
-    "Annual contribution": (
-        "Total household annual savings into investment accounts, in thousands of today's dollars. "
-        "Include employer match.<br><br>"
-        "<b>2026 limits:</b> 401(k) $24,500 (+$8k catch-up age 50–59/64+; +$11,250 age 60–63); "
-        "IRA $7,500 (+$1,100 catch-up age 50+)<br>"
-        "<i>Theory tab → §1.2</i>"
-    ),
-    "Contribution growth": (
-        "Real annual growth in your contribution above inflation. "
-        "Enter 0 if your nominal savings merely keeps pace with inflation.<br><br>"
-        "<b>Stable in real terms:</b> 0% &nbsp;|&nbsp; "
-        "<b>Modest salary growth:</b> 2–4% &nbsp;|&nbsp; "
-        "<b>Aggressive growth:</b> 4–6%<br>"
-        "<i>Theory tab → §1.2</i>"
-    ),
-    "Inflation": (
-        "Expected long-run inflation rate. Converts nominal returns to real returns via the "
-        "Fisher equation. Dollar inputs are always in today's purchasing power.<br><br>"
-        "<b>Fed long-run target:</b> 2.0%<br>"
-        "<b>US historical average 1990–2024 (CPI):</b> ~2.8%<br>"
-        "<b>Conservative / elevated-inflation scenario:</b> 3.0–4.0%<br>"
-        "<i>Theory tab → §1.3, §2</i>"
-    ),
-    "Pre-retirement return": (
-        "Expected nominal annual return while working — the figure quoted on a brokerage or "
-        "fund website. Converted to real return internally via the Fisher equation.<br><br>"
-        "<b>100% equities:</b> 10–11% &nbsp;|&nbsp; <b>80/20:</b> 9–10%<br>"
-        "<b>60/40 balanced:</b> 8–9% &nbsp;|&nbsp; <b>40/60:</b> 6–8%<br>"
-        "<b>Conservative forward-looking default:</b> 7%<br>"
-        "<i>Theory tab → §1.3, §3</i>"
-    ),
-    "Post-retirement return": (
-        "Expected nominal return after retirement. Usually lower than pre-retirement due to "
-        "a more conservative allocation that reduces sequence-of-returns risk.<br><br>"
-        "<b>80/20 equities/bonds:</b> 9–10% &nbsp;|&nbsp; <b>60/40:</b> 8–9%<br>"
-        "<b>40/60:</b> 6–8% &nbsp;|&nbsp; <b>20/80 conservative:</b> 5–7%<br>"
-        "<i>Theory tab → §1.3, §4, §8</i>"
-    ),
-    "Volatility": (
-        "Annual return standard deviation used in Monte Carlo simulations. Higher values "
-        "produce more spread in outcomes — more chance of very good or very bad results.<br><br>"
-        "<b>100% equities:</b> 15–20% &nbsp;|&nbsp; <b>70/30:</b> 11–14%<br>"
-        "<b>50/50 balanced:</b> 8–11% &nbsp;|&nbsp; <b>100% bonds:</b> 5–8%<br>"
-        "<b>Default (≈60–70% equity):</b> 12%<br>"
-        "<i>Theory tab → §1.3, §7</i>"
-    ),
-    "Annual expenses": (
-        "Total annual retirement spending in today's dollars, before Social Security or pension offsets.<br><br>"
-        "<b>Replacement rate rule of thumb:</b> 70–80% of pre-retirement gross income<br>"
-        "<b>4% rule implied portfolio:</b> 25× this figure<br>"
-        "<b>Median US household in retirement (BLS 2023):</b> ~$52k/yr<br>"
-        "<i>Theory tab → §1.4</i>"
-    ),
-    "Spending model": (
-        "How real spending changes with age. <b>Flat</b> is most conservative (no decline).<br><br>"
-        "<b>Three-phase:</b> full spending → slow-go (default 80% at age 75) → no-go (default 60% at age 85)<br>"
-        "<b>Taper:</b> spending declines by a fixed % per year after a start age "
-        "(default 1.5%/yr after 75 → ~86% of base after 10 years)<br><br>"
-        "Based on Blanchett (2014) retirement spending smile research.<br>"
-        "<i>Theory tab → §1.4</i>"
-    ),
-    "Social Security": (
-        "Monthly Social Security benefit in today's dollars for the chosen claiming age. "
-        "Find your personal estimate at ssa.gov/myaccount.<br><br>"
-        "<b>Approximate monthly benefit at FRA (age 67):</b><br>"
-        "Low earner (~$30k/yr avg): $0.8–1.2k<br>"
-        "Average earner (~$60k/yr): $1.5–2.2k<br>"
-        "High earner (~$120k/yr): $2.5–3.5k &nbsp;|&nbsp; Max (2024): ~$3.8k<br><br>"
-        "<b>Claiming age vs. FRA:</b> 62: −25–30% &nbsp;|&nbsp; 67: 0% &nbsp;|&nbsp; 70: +24%<br>"
-        "<b>Break-even for delaying 67→70:</b> ~age 82–83<br>"
-        "<i>Theory tab → §1.4, §5</i>"
-    ),
-    "Pension": (
-        "Monthly defined-benefit pension in today's dollars, and the age at which it begins. "
-        "Reduces required portfolio withdrawals from that age onward.<br><br>"
-        "<b>Tip:</b> Most pension statements already quote benefits in real or COLA-adjusted terms — "
-        "enter the stated monthly amount directly.<br>"
-        "<i>Theory tab → §1.4, §5</i>"
-    ),
-    "Monte Carlo": (
-        "Number of random return sequences to simulate. More paths = higher precision, slower run.<br><br>"
-        "<b>500 paths:</b> ±1.6% precision &nbsp;|&nbsp; "
-        "<b>1,000:</b> ±1.1% &nbsp;|&nbsp; "
-        "<b>5,000:</b> ±0.5%<br>"
-        "<b>Conservative planning target:</b> ≥90% success rate<br>"
-        "<b>Moderate target:</b> ≥80% success rate<br>"
-        "<i>Theory tab → §7, §9</i>"
-    ),
+INPUT_HELP = {
+    "Current age": {
+        "summary": "Your age today. This is the starting point for every projection.",
+        "guidance": "Enter your current age in whole years.",
+        "benchmarks": ["Range: 18-90"],
+        "theory": "§1.1",
+    },
+    "Life expectancy": {
+        "summary": "How long the plan must stay solvent. Longer values are more conservative.",
+        "guidance": "Use a planning age that is later than your median life expectancy, especially if you are healthy or planning for a couple.",
+        "benchmarks": [
+            "Conservative individual planning target: 90-95",
+            "Couples: roughly 50% chance one survives to 90",
+            "Median US male at 65: 84; female: 87",
+        ],
+        "theory": "§1.1",
+    },
+    "Target retirement age": {
+        "summary": "The age when contributions stop and portfolio withdrawals begin.",
+        "guidance": "Use the age you want to test, then compare it against the Retirement Age result tab.",
+        "benchmarks": [
+            "55: Rule of 55",
+            "59.5: penalty-free retirement account withdrawals",
+            "62: earliest Social Security",
+            "65: Medicare",
+            "67: Social Security full retirement age for many workers",
+            "70: maximum delayed Social Security benefit",
+        ],
+        "theory": "§1.1",
+    },
+    "Current savings": {
+        "summary": "Total investable assets today, in thousands of today's dollars.",
+        "guidance": "Include retirement accounts and brokerage assets. Exclude home equity unless selling or borrowing against the home is part of the plan.",
+        "benchmarks": ["4% rule implied portfolio target: 25x annual expenses"],
+        "theory": "§1.2",
+    },
+    "Annual contribution": {
+        "summary": "Total household annual investment savings, in thousands of today's dollars.",
+        "guidance": "Include employee contributions, IRA savings, taxable brokerage savings, and employer match.",
+        "benchmarks": [
+            "2026 401(k) limit: $24,500",
+            "2026 401(k) catch-up: $8,000 for ages 50-59 and 64+; $11,250 for ages 60-63",
+            "2026 IRA limit: $7,500; catch-up $1,100 for age 50+",
+        ],
+        "theory": "§1.2",
+    },
+    "Contribution growth": {
+        "summary": "Real annual growth in contributions above inflation.",
+        "guidance": "Use 0% if your savings rises only with inflation. Use a positive value if you expect raises or higher savings rates to increase real contributions.",
+        "benchmarks": [
+            "Stable in real terms: 0%",
+            "Modest salary growth: 2-4%",
+            "Aggressive growth: 4-6%",
+        ],
+        "theory": "§1.2",
+    },
+    "Inflation": {
+        "summary": "Expected long-run inflation. The planner converts nominal returns into real returns.",
+        "guidance": "Dollar inputs stay in today's purchasing power, so this mainly affects the real value of investment returns.",
+        "benchmarks": [
+            "Federal Reserve long-run target: 2.0%",
+            "US historical average 1990-2024 CPI: about 2.8%",
+            "Conservative elevated-inflation scenario: 3.0-4.0%",
+        ],
+        "theory": "§1.3, §2",
+    },
+    "Pre-retirement return": {
+        "summary": "Expected nominal annual investment return while working.",
+        "guidance": "Use the nominal return you expect from your working-years allocation. The model converts it to a real return internally.",
+        "benchmarks": [
+            "100% equities: 10-11%",
+            "80/20 stock/bond mix: 9-10%",
+            "60/40 balanced mix: 8-9%",
+            "40/60 stock/bond mix: 6-8%",
+            "Conservative forward-looking default: 7%",
+        ],
+        "theory": "§1.3, §3",
+    },
+    "Post-retirement return": {
+        "summary": "Expected nominal annual investment return after retirement.",
+        "guidance": "This is often lower than the pre-retirement return because retirement portfolios usually become more conservative.",
+        "benchmarks": [
+            "80/20 stock/bond mix: 9-10%",
+            "60/40 balanced mix: 8-9%",
+            "40/60 stock/bond mix: 6-8%",
+            "20/80 conservative mix: 5-7%",
+        ],
+        "theory": "§1.3, §4, §8",
+    },
+    "Volatility": {
+        "summary": "Annual return standard deviation used in Monte Carlo simulations.",
+        "guidance": "Higher volatility creates a wider range of simulated outcomes, including more very good and very bad paths.",
+        "benchmarks": [
+            "100% equities: 15-20%",
+            "70/30 stock/bond mix: 11-14%",
+            "50/50 balanced mix: 8-11%",
+            "100% bonds: 5-8%",
+            "Default, roughly 60-70% equity: 12%",
+        ],
+        "theory": "§1.3, §7",
+    },
+    "Annual expenses": {
+        "summary": "Total annual retirement spending before Social Security or pension offsets.",
+        "guidance": "Enter spending in today's dollars. Include taxes, healthcare, housing, travel, and recurring household costs.",
+        "benchmarks": [
+            "Replacement-rate rule of thumb: 70-80% of pre-retirement gross income",
+            "4% rule implied portfolio: 25x this figure",
+            "Median US household spending in retirement, BLS 2023: about $52k/year",
+        ],
+        "theory": "§1.4",
+    },
+    "Spending model": {
+        "summary": "How real spending changes with age. Flat spending is the most conservative option.",
+        "guidance": "Use Flat when you want a conservative first pass. Use Three-phase or Annual taper when you want to model spending that declines later in retirement.",
+        "benchmarks": [
+            "Three-phase: full spending, then slow-go at 80% by age 75, then no-go at 60% by age 85",
+            "Taper: fixed annual decline after a start age; default is 1.5% per year after 75",
+            "Research basis: Blanchett 2014 retirement spending smile",
+        ],
+        "theory": "§1.4",
+    },
+    "Social Security": {
+        "summary": "Monthly Social Security benefit in today's dollars for the selected claiming age.",
+        "guidance": "Use your personal estimate from ssa.gov/myaccount when possible. The model treats this as inflation-adjusted income.",
+        "benchmarks": [
+            "Approximate monthly benefit at FRA 67, low earner: $0.8-1.2k",
+            "Approximate monthly benefit at FRA 67, average earner: $1.5-2.2k",
+            "Approximate monthly benefit at FRA 67, high earner: $2.5-3.5k",
+            "Claiming age versus FRA: age 62 is about 25-30% lower; age 70 is about 24% higher",
+            "Break-even for delaying from 67 to 70: roughly age 82-83",
+        ],
+        "theory": "§1.4, §5",
+    },
+    "Pension": {
+        "summary": "Monthly defined-benefit pension income and the age when it begins.",
+        "guidance": "Enter the monthly amount in today's dollars. Pension income reduces the portfolio withdrawal needed after it starts.",
+        "benchmarks": [
+            "Most pension statements quote a monthly benefit directly",
+            "If the pension has no cost-of-living adjustment, consider using a more conservative value",
+        ],
+        "theory": "§1.4, §5",
+    },
+    "Monte Carlo": {
+        "summary": "Number of random return paths used to estimate success rates.",
+        "guidance": "Use fewer paths for quick exploration and more paths when comparing final scenarios.",
+        "benchmarks": [
+            "500 paths: about +/- 1.6 percentage point precision",
+            "1,000 paths: about +/- 1.1 percentage point precision",
+            "5,000 paths: about +/- 0.5 percentage point precision",
+            "Conservative planning target: at least 90% success",
+            "Moderate planning target: at least 80% success",
+        ],
+        "theory": "§7, §9",
+    },
 }
+
+
+def help_tooltip(topic: str) -> str:
+    return INPUT_HELP[topic]["summary"]
+
+
+def help_ai_text(topic: str) -> str:
+    help_record = INPUT_HELP[topic]
+    lines = [
+        f"Summary: {help_record['summary']}",
+        f"Guidance: {help_record['guidance']}",
+    ]
+    benchmarks = help_record.get("benchmarks", [])
+    if benchmarks:
+        lines.append("Benchmarks:")
+        lines.extend(f"- {item}" for item in benchmarks)
+    if help_record.get("theory"):
+        lines.append(f"Theory reference: {help_record['theory']}")
+    return "\n".join(lines)
 
 
 MC_SIM_OPTIONS = {
@@ -308,7 +367,7 @@ def _parse_numeric(text: str, integer: bool) -> int | float | None:
 
 
 def set_help_topic(topic: str | None) -> None:
-    if topic in HELP_TEXT:
+    if topic in INPUT_HELP:
         st.session_state["selected_help_input"] = topic
 
 
@@ -459,7 +518,7 @@ def analysis_age_range(assumptions: dict[str, Any], step: int = 1) -> list[int]:
 
 def focus_help_widget(selected_topic: str) -> None:
     """Render help that updates immediately when sidebar inputs receive focus."""
-    topics_json = json.dumps(HELP_TEXT)
+    topics_json = json.dumps(INPUT_HELP)
     aliases_json = json.dumps(HELP_FOCUS_ALIASES)
     selected_json = json.dumps(selected_topic)
     components.html(
@@ -486,7 +545,43 @@ def focus_help_widget(selected_topic: str) -> None:
         function render(topic) {{
           if (!topics[topic]) return;
           select.value = topic;
-          info.innerHTML = topics[topic];
+          const record = topics[topic];
+          const guidance = record.guidance
+            ? `<p class="help-guidance">${{escapeHtml(record.guidance)}}</p>`
+            : "";
+          const benchmarks = (record.benchmarks || [])
+            .map((item) => `<li>${{escapeHtml(item)}}</li>`)
+            .join("");
+          const benchmarkBlock = benchmarks
+            ? `
+              <section class="help-context">
+                <h4>Common values and planning context</h4>
+                <ul>${{benchmarks}}</ul>
+              </section>
+            `
+            : "";
+          const theory = record.theory
+            ? `<div class="help-theory">Theory tab: ${{escapeHtml(record.theory)}}</div>`
+            : "";
+          info.innerHTML = `
+            <div class="help-grid">
+              <section class="help-card">
+                <p class="help-summary">${{escapeHtml(record.summary)}}</p>
+                ${{guidance}}
+              </section>
+              ${{benchmarkBlock}}
+            </div>
+            ${{theory}}
+          `;
+        }}
+
+        function escapeHtml(text) {{
+          return String(text)
+            .replaceAll("&", "&amp;")
+            .replaceAll("<", "&lt;")
+            .replaceAll(">", "&gt;")
+            .replaceAll('"', "&quot;")
+            .replaceAll("'", "&#039;");
         }}
 
         function topicForElement(element) {{
@@ -545,15 +640,64 @@ def focus_help_widget(selected_topic: str) -> None:
         }}
         #help-info {{
           margin-top: 0.75rem;
-          padding: 0.85rem 1rem;
+          display: grid;
+          gap: 0.55rem;
+        }}
+        .help-grid {{
+          display: grid;
+          grid-template-columns: minmax(0, 0.95fr) minmax(0, 1.05fr);
+          gap: 0.75rem;
+          align-items: start;
+        }}
+        .help-card {{
+          padding: 0.9rem 1rem;
           border-radius: 0.5rem;
           background: rgb(232, 244, 255);
+          border: 1px solid rgba(46, 117, 182, 0.16);
           color: rgb(20, 48, 86);
           line-height: 1.45;
         }}
+        .help-summary {{
+          margin: 0;
+          font-weight: 650;
+        }}
+        .help-guidance {{
+          margin: 0.55rem 0 0;
+        }}
+        .help-context {{
+          border: 1px solid rgba(49, 51, 63, 0.14);
+          border-radius: 0.5rem;
+          background: white;
+          padding: 0.75rem 0.9rem 0.85rem;
+        }}
+        .help-context h4 {{
+          margin: 0 0 0.45rem;
+          font-size: 0.92rem;
+          font-weight: 650;
+          color: rgb(49, 51, 63);
+        }}
+        .help-context ul {{
+          margin: 0 0 0 1.1rem;
+          padding: 0;
+          color: rgb(73, 77, 90);
+          line-height: 1.45;
+        }}
+        .help-context li {{
+          margin: 0.25rem 0;
+        }}
+        .help-theory {{
+          color: rgb(101, 106, 118);
+          font-size: 0.86rem;
+          padding-left: 0.1rem;
+        }}
+        @media (max-width: 700px) {{
+          .help-grid {{
+            grid-template-columns: 1fr;
+          }}
+        }}
         </style>
         """,
-        height=180,
+        height=260,
     )
 
 
@@ -591,9 +735,9 @@ def ai_help_panel(scenario: dict[str, Any]) -> None:
             with st.expander("Setup", expanded=False):
                 st.markdown(setup_text)
 
-    topic_options = sorted(HELP_TEXT)
+    topic_options = sorted(INPUT_HELP)
     default_topic = st.session_state.get("selected_help_input", "Current age")
-    if default_topic not in HELP_TEXT:
+    if default_topic not in INPUT_HELP:
         default_topic = "Current age"
     selected_input = st.selectbox(
         "Ask about",
@@ -615,7 +759,7 @@ def ai_help_panel(scenario: dict[str, Any]) -> None:
                     question,
                     scenario,
                     selected_input,
-                    HELP_TEXT[selected_input],
+                    help_ai_text(selected_input),
                 )
                 st.session_state.pop("ai_help_error", None)
             except AIHelpError as exc:
@@ -644,7 +788,7 @@ def build_sidebar(scenario: dict[str, Any]) -> dict[str, Any]:
             90,
             int(scenario["current_age"]),
             key="current_age",
-            help=HELP_TEXT["Current age"],
+            help=help_tooltip("Current age"),
         ))
         life_expectancy = int(slider_text(
             "Life expectancy",
@@ -652,7 +796,7 @@ def build_sidebar(scenario: dict[str, Any]) -> dict[str, Any]:
             110,
             max(int(scenario["life_expectancy"]), current_age + 1),
             key="life_expectancy",
-            help=HELP_TEXT["Life expectancy"],
+            help=help_tooltip("Life expectancy"),
         ))
         target_retirement_age = int(slider_text(
             "Target retirement age",
@@ -660,7 +804,7 @@ def build_sidebar(scenario: dict[str, Any]) -> dict[str, Any]:
             min(life_expectancy, 85),
             min(max(int(scenario["target_retirement_age"]), current_age + 1), life_expectancy),
             key="target_retirement_age",
-            help=HELP_TEXT["Target retirement age"],
+            help=help_tooltip("Target retirement age"),
         ))
         has_spouse = st.checkbox(
             "Include spouse", value=bool(scenario.get("has_spouse", False))
@@ -715,7 +859,7 @@ def build_sidebar(scenario: dict[str, Any]) -> dict[str, Any]:
             "Current savings ($k)",
             float(scenario["current_savings"]),
             key="current_savings",
-            help=HELP_TEXT["Current savings"],
+            help=help_tooltip("Current savings"),
             help_topic="Current savings",
             inline=True,
         ))
@@ -723,7 +867,7 @@ def build_sidebar(scenario: dict[str, Any]) -> dict[str, Any]:
             "Annual contribution ($k)",
             float(scenario["annual_contribution"]),
             key="annual_contribution",
-            help=HELP_TEXT["Annual contribution"],
+            help=help_tooltip("Annual contribution"),
             help_topic="Annual contribution",
             inline=True,
         ))
@@ -731,7 +875,7 @@ def build_sidebar(scenario: dict[str, Any]) -> dict[str, Any]:
             "Contribution growth (real %)",
             float(scenario["contribution_growth_rate"]),
             key="contribution_growth_rate",
-            help=HELP_TEXT["Contribution growth"],
+            help=help_tooltip("Contribution growth"),
             help_topic="Contribution growth",
             inline=True,
         ))
@@ -744,7 +888,7 @@ def build_sidebar(scenario: dict[str, Any]) -> dict[str, Any]:
             float(scenario["inflation_rate"]),
             step=0.25,
             key="inflation_rate",
-            help=HELP_TEXT["Inflation"],
+            help=help_tooltip("Inflation"),
             help_topic="Inflation",
         ))
         pre_retirement_return = float(slider_text(
@@ -754,7 +898,7 @@ def build_sidebar(scenario: dict[str, Any]) -> dict[str, Any]:
             float(scenario["pre_retirement_return"]),
             step=0.25,
             key="pre_retirement_return",
-            help=HELP_TEXT["Pre-retirement return"],
+            help=help_tooltip("Pre-retirement return"),
             help_topic="Pre-retirement return",
         ))
         post_retirement_return = float(slider_text(
@@ -764,7 +908,7 @@ def build_sidebar(scenario: dict[str, Any]) -> dict[str, Any]:
             float(scenario["post_retirement_return"]),
             step=0.25,
             key="post_retirement_return",
-            help=HELP_TEXT["Post-retirement return"],
+            help=help_tooltip("Post-retirement return"),
             help_topic="Post-retirement return",
         ))
         return_volatility = float(slider_text(
@@ -774,7 +918,7 @@ def build_sidebar(scenario: dict[str, Any]) -> dict[str, Any]:
             float(scenario["return_volatility"]),
             step=0.5,
             key="return_volatility",
-            help=HELP_TEXT["Volatility"],
+            help=help_tooltip("Volatility"),
             help_topic="Volatility",
         ))
 
@@ -783,7 +927,7 @@ def build_sidebar(scenario: dict[str, Any]) -> dict[str, Any]:
             "Annual expenses ($k)",
             float(scenario["annual_expenses"]),
             key="annual_expenses",
-            help=HELP_TEXT["Annual expenses"],
+            help=help_tooltip("Annual expenses"),
             help_topic="Annual expenses",
         ))
         spending_model = st.radio(
@@ -798,7 +942,7 @@ def build_sidebar(scenario: dict[str, Any]) -> dict[str, Any]:
                 "taper": "Annual taper",
             }.get,
             horizontal=True,
-            help=HELP_TEXT["Spending model"],
+            help=help_tooltip("Spending model"),
             on_change=set_help_topic,
             args=("Spending model",),
         )
@@ -822,7 +966,7 @@ def build_sidebar(scenario: dict[str, Any]) -> dict[str, Any]:
             "Social Security monthly ($k)",
             float(scenario["social_security_monthly"]),
             key="social_security_monthly",
-            help=HELP_TEXT["Social Security"],
+            help=help_tooltip("Social Security"),
             help_topic="Social Security",
         ))
         social_security_start_age = st.radio(
@@ -865,7 +1009,7 @@ def build_sidebar(scenario: dict[str, Any]) -> dict[str, Any]:
                 float(scenario.get("pension_monthly", 0.0)),
                 step=0.1,
                 key="pension_monthly",
-                help=HELP_TEXT["Pension"],
+                help=help_tooltip("Pension"),
                 help_topic="Pension",
                 allow_above_slider=True,
             ))
@@ -891,7 +1035,7 @@ def build_sidebar(scenario: dict[str, Any]) -> dict[str, Any]:
             ),
             format_func=lambda label: f"{label} ({MC_SIM_OPTIONS[label]:,})",
             horizontal=True,
-            help=HELP_TEXT["Monte Carlo"],
+            help=help_tooltip("Monte Carlo"),
             on_change=set_help_topic,
             args=("Monte Carlo",),
         )
@@ -1215,7 +1359,7 @@ with theory_tab:
 
 with help_tab:
     st.subheader("Input Help")
-    if st.session_state.get("selected_help_input") not in HELP_TEXT:
+    if st.session_state.get("selected_help_input") not in INPUT_HELP:
         st.session_state["selected_help_input"] = "Current age"
     focus_help_widget(st.session_state["selected_help_input"])
     ai_help_panel(scenario)
