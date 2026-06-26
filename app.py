@@ -133,6 +133,93 @@ def scenario_download(scenario: dict[str, Any]) -> None:
     )
 
 
+def _format_numeric(value: int | float, integer: bool) -> str:
+    if integer:
+        return str(int(round(float(value))))
+    return f"{float(value):g}"
+
+
+def _parse_numeric(text: str, integer: bool) -> int | float | None:
+    cleaned = text.strip().replace("$", "").replace(",", "")
+    if not cleaned:
+        return None
+    try:
+        value = float(cleaned)
+    except ValueError:
+        return None
+    return int(round(value)) if integer else value
+
+
+def slider_text(
+    label: str,
+    min_value: int | float,
+    max_value: int | float,
+    value: int | float,
+    step: int | float = 1,
+    *,
+    key: str,
+    help: str | None = None,
+    allow_above_slider: bool = False,
+) -> int | float:
+    """Render a slider paired with a plain text input for exact entry."""
+    integer = all(isinstance(v, int) for v in (min_value, max_value, step))
+    slider_key = f"{key}_slider"
+    text_key = f"{key}_text"
+    slider_value = min(max(value, min_value), max_value)
+
+    try:
+        if slider_key not in st.session_state:
+            st.session_state[slider_key] = slider_value
+        if text_key not in st.session_state:
+            st.session_state[text_key] = _format_numeric(value, integer)
+    except Exception:
+        pass
+
+    def sync_text_from_slider() -> None:
+        st.session_state[text_key] = _format_numeric(
+            st.session_state[slider_key], integer
+        )
+
+    def sync_slider_from_text() -> None:
+        parsed = _parse_numeric(st.session_state.get(text_key, ""), integer)
+        if parsed is None:
+            return
+        if min_value <= parsed <= max_value:
+            st.session_state[slider_key] = parsed
+
+    slider_col, text_col = st.columns([0.68, 0.32])
+    with slider_col:
+        slider_result = st.slider(
+            label,
+            min_value=min_value,
+            max_value=max_value,
+            value=slider_value,
+            step=step,
+            help=help,
+            key=slider_key,
+            on_change=sync_text_from_slider,
+        )
+    with text_col:
+        text_result = st.text_input(
+            "Exact value",
+            key=text_key,
+            label_visibility="collapsed",
+            on_change=sync_slider_from_text,
+        )
+
+    parsed = _parse_numeric(text_result, integer)
+    if parsed is None:
+        st.warning(f"'{text_result}' is not a valid value for {label}.")
+        return slider_result
+    if parsed < min_value:
+        st.warning(f"{label} cannot be below {min_value}.")
+        return slider_result
+    if parsed > max_value and not allow_above_slider:
+        st.warning(f"{label} cannot be above {max_value}.")
+        return slider_result
+    return parsed
+
+
 def build_sidebar(scenario: dict[str, Any]) -> dict[str, Any]:
     st.sidebar.title("Assumptions")
     st.sidebar.caption("All dollar amounts are today's dollars unless noted.")
@@ -142,39 +229,49 @@ def build_sidebar(scenario: dict[str, Any]) -> dict[str, Any]:
     )
 
     with st.sidebar.expander("Household", expanded=True):
-        current_age = st.slider(
+        current_age = int(slider_text(
             "Current age",
             18,
             90,
             int(scenario["current_age"]),
+            key="current_age",
             help=HELP_TEXT["Current age"],
-        )
-        life_expectancy = st.slider(
+        ))
+        life_expectancy = int(slider_text(
             "Life expectancy",
             max(current_age + 1, 70),
             110,
             max(int(scenario["life_expectancy"]), current_age + 1),
+            key="life_expectancy",
             help=HELP_TEXT["Life expectancy"],
-        )
-        target_retirement_age = st.slider(
+        ))
+        target_retirement_age = int(slider_text(
             "Target retirement age",
             max(current_age + 1, 40),
             min(life_expectancy, 85),
             min(max(int(scenario["target_retirement_age"]), current_age + 1), life_expectancy),
+            key="target_retirement_age",
             help=HELP_TEXT["Target retirement age"],
-        )
+        ))
         has_spouse = st.checkbox(
             "Include spouse", value=bool(scenario.get("has_spouse", False))
         )
         if has_spouse:
-            spouse_age = st.slider("Spouse age", 18, 90, int(scenario.get("spouse_age", 54)))
-            spouse_life_expectancy = st.slider(
+            spouse_age = int(slider_text(
+                "Spouse age",
+                18,
+                90,
+                int(scenario.get("spouse_age", 54)),
+                key="spouse_age",
+            ))
+            spouse_life_expectancy = int(slider_text(
                 "Spouse life expectancy",
                 max(spouse_age + 1, 70),
                 110,
                 max(int(scenario.get("spouse_life_expectancy", 92)), spouse_age + 1),
-            )
-            spouse_retirement_age = st.slider(
+                key="spouse_life_expectancy",
+            ))
+            spouse_retirement_age = int(slider_text(
                 "Spouse retirement age",
                 max(spouse_age + 1, 40),
                 min(spouse_life_expectancy, 85),
@@ -182,14 +279,16 @@ def build_sidebar(scenario: dict[str, Any]) -> dict[str, Any]:
                     max(int(scenario.get("spouse_retirement_age", 63)), spouse_age + 1),
                     spouse_life_expectancy,
                 ),
-            )
-            survivor_spending_pct = st.slider(
+                key="spouse_retirement_age",
+            ))
+            survivor_spending_pct = float(slider_text(
                 "Survivor spending %",
                 50.0,
                 100.0,
                 float(scenario.get("survivor_spending_pct", 70.0)),
                 step=5.0,
-            )
+                key="survivor_spending_pct",
+            ))
         else:
             spouse_age = scenario.get("spouse_age", DEFAULT_SCENARIO["spouse_age"])
             spouse_life_expectancy = scenario.get(
@@ -203,81 +302,85 @@ def build_sidebar(scenario: dict[str, Any]) -> dict[str, Any]:
             )
 
     with st.sidebar.expander("Savings", expanded=True):
-        current_savings = st.slider(
+        current_savings = float(slider_text(
             "Current savings ($k)",
             0.0,
             10_000.0,
             float(scenario["current_savings"]),
             step=10.0,
+            key="current_savings",
             help=HELP_TEXT["Current savings"],
-        )
-        annual_contribution = st.slider(
+            allow_above_slider=True,
+        ))
+        annual_contribution = float(slider_text(
             "Annual contribution ($k)",
             0.0,
             500.0,
             float(scenario["annual_contribution"]),
             step=1.0,
+            key="annual_contribution",
             help=HELP_TEXT["Annual contribution"],
-        )
-        contribution_growth_rate = st.slider(
+            allow_above_slider=True,
+        ))
+        contribution_growth_rate = float(slider_text(
             "Contribution growth (real %)",
             0.0,
             10.0,
             float(scenario["contribution_growth_rate"]),
             step=0.25,
+            key="contribution_growth_rate",
             help=HELP_TEXT["Contribution growth"],
-        )
+        ))
 
     with st.sidebar.expander("Returns", expanded=True):
-        inflation_rate = st.slider(
+        inflation_rate = float(slider_text(
             "Inflation rate (%)",
             0.0,
             10.0,
             float(scenario["inflation_rate"]),
             step=0.25,
+            key="inflation_rate",
             help=HELP_TEXT["Inflation"],
-        )
-        pre_retirement_return = st.slider(
+        ))
+        pre_retirement_return = float(slider_text(
             "Pre-retirement return (nominal %)",
             0.0,
             20.0,
             float(scenario["pre_retirement_return"]),
             step=0.25,
+            key="pre_retirement_return",
             help=HELP_TEXT["Pre-retirement return"],
-        )
-        post_retirement_return = st.slider(
+        ))
+        post_retirement_return = float(slider_text(
             "Post-retirement return (nominal %)",
             0.0,
             15.0,
             float(scenario["post_retirement_return"]),
             step=0.25,
+            key="post_retirement_return",
             help=HELP_TEXT["Post-retirement return"],
-        )
-        return_volatility = st.slider(
+        ))
+        return_volatility = float(slider_text(
             "Return volatility (%)",
             0.0,
             30.0,
             float(scenario["return_volatility"]),
             step=0.5,
+            key="return_volatility",
             help=HELP_TEXT["Volatility"],
-        )
+        ))
 
     with st.sidebar.expander("Spending", expanded=True):
-        annual_expenses = st.slider(
+        annual_expenses = float(slider_text(
             "Annual expenses ($k)",
             0.0,
             500.0,
-            min(float(scenario["annual_expenses"]), 500.0),
+            float(scenario["annual_expenses"]),
             step=1.0,
+            key="annual_expenses",
             help=HELP_TEXT["Annual expenses"],
-        )
-        if float(scenario["annual_expenses"]) > 500:
-            annual_expenses = st.number_input(
-                "Annual expenses override ($k)",
-                min_value=0.0,
-                value=float(scenario["annual_expenses"]),
-                step=1.0,
-            )
+            allow_above_slider=True,
+        ))
         spending_model = st.radio(
             "Spending model",
             ["flat", "three_phase", "taper"],
@@ -299,30 +402,25 @@ def build_sidebar(scenario: dict[str, Any]) -> dict[str, Any]:
         taper_start_age = scenario.get("taper_start_age", 75)
         taper_rate_pct = scenario.get("taper_rate_pct", 1.5)
         if spending_model == "three_phase":
-            slow_go_age = st.slider("Slow-go starts", 60, 95, int(slow_go_age))
-            slow_go_pct = st.slider("Slow-go spending %", 10.0, 100.0, float(slow_go_pct), step=5.0)
-            no_go_age = st.slider("No-go starts", 65, 100, int(no_go_age))
-            no_go_pct = st.slider("No-go spending %", 10.0, 100.0, float(no_go_pct), step=5.0)
+            slow_go_age = int(slider_text("Slow-go starts", 60, 95, int(slow_go_age), key="slow_go_age"))
+            slow_go_pct = float(slider_text("Slow-go spending %", 10.0, 100.0, float(slow_go_pct), step=5.0, key="slow_go_pct"))
+            no_go_age = int(slider_text("No-go starts", 65, 100, int(no_go_age), key="no_go_age"))
+            no_go_pct = float(slider_text("No-go spending %", 10.0, 100.0, float(no_go_pct), step=5.0, key="no_go_pct"))
         elif spending_model == "taper":
-            taper_start_age = st.slider("Taper starts", 60, 95, int(taper_start_age))
-            taper_rate_pct = st.slider("Taper rate (%/yr)", 0.1, 10.0, float(taper_rate_pct), step=0.1)
+            taper_start_age = int(slider_text("Taper starts", 60, 95, int(taper_start_age), key="taper_start_age"))
+            taper_rate_pct = float(slider_text("Taper rate (%/yr)", 0.1, 10.0, float(taper_rate_pct), step=0.1, key="taper_rate_pct"))
 
     with st.sidebar.expander("Income", expanded=True):
-        social_security_monthly = st.slider(
+        social_security_monthly = float(slider_text(
             "Social Security monthly ($k)",
             0.0,
             10.0,
-            min(float(scenario["social_security_monthly"]), 10.0),
+            float(scenario["social_security_monthly"]),
             step=0.1,
+            key="social_security_monthly",
             help=HELP_TEXT["Social Security"],
-        )
-        if float(scenario["social_security_monthly"]) > 10:
-            social_security_monthly = st.number_input(
-                "Social Security override ($k)",
-                min_value=0.0,
-                value=float(scenario["social_security_monthly"]),
-                step=0.1,
-            )
+            allow_above_slider=True,
+        ))
         social_security_start_age = st.radio(
             "Social Security start age",
             [62, 65, 67, 70],
@@ -330,13 +428,15 @@ def build_sidebar(scenario: dict[str, Any]) -> dict[str, Any]:
             horizontal=True,
         )
         if has_spouse:
-            spouse_ss_monthly = st.slider(
+            spouse_ss_monthly = float(slider_text(
                 "Spouse SS monthly ($k)",
                 0.0,
                 10.0,
-                min(float(scenario.get("spouse_ss_monthly", 1.5)), 10.0),
+                float(scenario.get("spouse_ss_monthly", 1.5)),
                 step=0.1,
-            )
+                key="spouse_ss_monthly",
+                allow_above_slider=True,
+            ))
             spouse_ss_start_age = st.radio(
                 "Spouse SS start age",
                 [62, 65, 67, 70],
@@ -357,20 +457,23 @@ def build_sidebar(scenario: dict[str, Any]) -> dict[str, Any]:
             "Include pension", value=bool(scenario.get("has_pension", False))
         )
         if has_pension:
-            pension_monthly = st.slider(
+            pension_monthly = float(slider_text(
                 "Pension monthly ($k)",
                 0.0,
                 20.0,
-                min(float(scenario.get("pension_monthly", 0.0)), 20.0),
+                float(scenario.get("pension_monthly", 0.0)),
                 step=0.1,
+                key="pension_monthly",
                 help=HELP_TEXT["Pension"],
-            )
-            pension_start_age = st.slider(
+                allow_above_slider=True,
+            ))
+            pension_start_age = int(slider_text(
                 "Pension start age",
                 40,
                 85,
                 int(scenario.get("pension_start_age", 60)),
-            )
+                key="pension_start_age",
+            ))
         else:
             pension_monthly = scenario.get("pension_monthly", 0.0)
             pension_start_age = scenario.get("pension_start_age", 60)
