@@ -1491,7 +1491,28 @@ def sweep_chart(sweep: pd.DataFrame) -> plt.Figure:
     return fig
 
 
-def grid_chart(ages: list[int], balances: np.ndarray, grid: np.ndarray) -> plt.Figure:
+def _balance_for_success_rate(
+    ages: list[int],
+    balances: np.ndarray,
+    grid: np.ndarray,
+    target_age: int,
+    success_rate: float,
+) -> float | None:
+    if target_age not in ages:
+        return None
+    age_idx = ages.index(target_age)
+    success_by_balance = grid[:, age_idx]
+    if success_by_balance.max() < success_rate or success_by_balance.min() > success_rate:
+        return None
+    return float(np.interp(success_rate, success_by_balance, balances))
+
+
+def grid_chart(
+    ages: list[int],
+    balances: np.ndarray,
+    grid: np.ndarray,
+    target_retirement_age: int,
+) -> plt.Figure:
     fig, ax = plt.subplots(figsize=(10, 5.4))
     cf = ax.contourf(
         np.array(ages),
@@ -1513,12 +1534,36 @@ def grid_chart(ages: list[int], balances: np.ndarray, grid: np.ndarray) -> plt.F
             linewidths=1.6,
         )
         ax.clabel(cs, fmt="%d%%", fontsize=9)
+    target_balance = _balance_for_success_rate(
+        ages,
+        balances,
+        grid,
+        target_retirement_age,
+        0.80,
+    )
+    if target_balance is not None:
+        target_balance_k = target_balance / 1_000
+        ax.axvline(
+            target_retirement_age,
+            color="#111827",
+            linestyle="--",
+            linewidth=1.3,
+            label=f"Selected age {target_retirement_age}",
+        )
+        ax.axhline(
+            target_balance_k,
+            color="#111827",
+            linestyle="--",
+            linewidth=1.3,
+            label=f"80% balance ${target_balance_k:,.0f}k",
+        )
     ax.set_xlabel("Retirement age")
     ax.set_ylabel("Starting balance ($k, today's dollars)")
     ax.xaxis.set_minor_locator(AutoMinorLocator(2))
     ax.yaxis.set_minor_locator(AutoMinorLocator(2))
     ax.grid(True, which="major", alpha=0.25)
     ax.grid(True, which="minor", alpha=0.28, linewidth=0.6)
+    ax.legend(loc="best")
     fig.tight_layout()
     return fig
 
@@ -1666,7 +1711,10 @@ with grid_tab:
     if not ages:
         st.info("No retirement ages available for the grid.")
     else:
-        st.pyplot(grid_chart(ages, balances, grid), clear_figure=True)
+        st.pyplot(
+            grid_chart(ages, balances, grid, int(scenario["target_retirement_age"])),
+            clear_figure=True,
+        )
         st.caption("Balances are shown in today's dollars.")
         st.caption(f"Using {int(scenario['grid_sims']):,} Monte Carlo paths per grid cell.")
 
