@@ -47,6 +47,43 @@ pip install -r requirements.txt
 streamlit run app.py
 ```
 
+### Optional local AI help
+
+The Help tab can answer questions with [Ollama](https://ollama.com), using a
+local model instead of an external chat service. Ollama is optional; the
+planner still runs without it, but AI answers are unavailable until Ollama is
+installed and running.
+
+1. Install Ollama from the official download page:
+   <https://ollama.com/download>
+
+2. Pull a small general-purpose model:
+   ```
+   ollama pull llama3.2:3b
+   ```
+
+3. Confirm the model works:
+   ```
+   ollama run llama3.2:3b
+   ```
+
+4. Leave Ollama running in the background, then start the planner:
+   ```
+   streamlit run app.py
+   ```
+
+The default local Ollama API URL is `http://localhost:11434`. These
+environment variables control the integration:
+
+```
+AI_HELP_PROVIDER=ollama
+OLLAMA_BASE_URL=http://localhost:11434
+OLLAMA_MODEL=llama3.2:3b
+```
+
+Other models can be found in the Ollama model library:
+<https://ollama.com/library>
+
 **Jupyter Lab** (editable, code visible):
 ```
 pip install -r requirements.txt

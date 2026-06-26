@@ -11,6 +11,13 @@ import pandas as pd
 import streamlit as st
 import streamlit.components.v1 as components
 
+from ai_help import (
+    DEFAULT_OLLAMA_BASE_URL,
+    DEFAULT_OLLAMA_MODEL,
+    AIHelpError,
+    ai_help_config,
+    ask_ai_help,
+)
 from retirement_model import (
     DEFAULT_SCENARIO,
     deterministic_summary,
@@ -444,6 +451,78 @@ def focus_help_widget(selected_topic: str) -> None:
         """,
         height=180,
     )
+
+
+def ai_help_panel(scenario: dict[str, Any]) -> None:
+    """Render the optional local AI help interface."""
+    config = ai_help_config()
+    if config["provider"] != "ollama":
+        st.warning(f"Unsupported AI_HELP_PROVIDER: `{config['provider']}`")
+        return
+
+    ai_header, setup_col, _ = st.columns([0.26, 0.16, 0.58], vertical_alignment="center")
+    with ai_header:
+        st.subheader("Ask Local AI")
+    setup_text = f"""
+    Install Ollama from <https://ollama.com/download>, then run:
+
+    ```bash
+    ollama pull {DEFAULT_OLLAMA_MODEL}
+    ```
+
+    Optional smoke test:
+
+    ```bash
+    ollama run {DEFAULT_OLLAMA_MODEL}
+    ```
+
+    The planner expects Ollama at `{DEFAULT_OLLAMA_BASE_URL}` unless
+    `OLLAMA_BASE_URL` is set. Set `OLLAMA_MODEL` to use a different local model.
+    """
+    with setup_col:
+        if hasattr(st, "popover"):
+            with st.popover("Setup"):
+                st.markdown(setup_text)
+        else:
+            with st.expander("Setup", expanded=False):
+                st.markdown(setup_text)
+
+    topic_options = sorted(HELP_TEXT)
+    default_topic = st.session_state.get("selected_help_input", "Current age")
+    if default_topic not in HELP_TEXT:
+        default_topic = "Current age"
+    selected_input = st.selectbox(
+        "Ask about",
+        topic_options,
+        index=topic_options.index(default_topic),
+        key="ai_help_topic",
+    )
+    question = st.text_area(
+        "Question",
+        value=f"What is a reasonable way to estimate {selected_input.lower()}?",
+        height=90,
+        key="ai_help_question",
+    )
+
+    if st.button("Ask AI", type="primary"):
+        with st.spinner("Asking local Ollama..."):
+            try:
+                st.session_state["ai_help_answer"] = ask_ai_help(
+                    question,
+                    scenario,
+                    selected_input,
+                    HELP_TEXT[selected_input],
+                )
+                st.session_state.pop("ai_help_error", None)
+            except AIHelpError as exc:
+                st.session_state["ai_help_error"] = str(exc)
+                st.session_state.pop("ai_help_answer", None)
+
+    if st.session_state.get("ai_help_error"):
+        st.error(st.session_state["ai_help_error"])
+    if st.session_state.get("ai_help_answer"):
+        st.markdown(st.session_state["ai_help_answer"])
+    st.caption(f"Ollama model `{config['model']}` at `{config['base_url']}`")
 
 
 def build_sidebar(scenario: dict[str, Any]) -> dict[str, Any]:
@@ -1038,6 +1117,7 @@ with help_tab:
     if st.session_state.get("selected_help_input") not in HELP_TEXT:
         st.session_state["selected_help_input"] = "Current age"
     focus_help_widget(st.session_state["selected_help_input"])
+    ai_help_panel(scenario)
     st.markdown(
         """
         **Model reminders**
