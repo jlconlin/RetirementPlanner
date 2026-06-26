@@ -1,7 +1,5 @@
 numpy>=1.23,<1.25
 pandas
 matplotlib
-ipywidgets
-voila
 streamlit>=1.40,<2
 pytest

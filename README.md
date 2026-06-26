@@ -4,14 +4,15 @@ A personal retirement planning dashboard. Adjust assumptions with sliders,
 review deterministic and Monte Carlo results, inspect retirement-age sweeps,
 and save or load scenario JSON files.
 
-[![Launch on Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/jlconlin/RetirementPlanner/HEAD?urlpath=voila%2Frender%2Fretirement_planner.ipynb)
+[![Deploy on Streamlit Community Cloud](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](https://share.streamlit.io/)
 
 ---
 
 ## Features
 
 - **Streamlit dashboard** — grouped assumptions, headline metrics, tabbed
-  results, scenario download/upload, and contextual input help
+  results, scenario download/upload, contextual input help, and optional local
+  AI help
 - **Deterministic projection** — year-by-year portfolio balance under constant
   assumed returns, updating live as you adjust inputs
 - **Earliest retirement age** — finds the youngest age at which your portfolio
@@ -21,6 +22,8 @@ and save or load scenario JSON files.
 - **Success rate sweep** — plots success rate across a range of retirement ages
 - **Balance &#215; age heatmap** — shows the portfolio balance you need at each
   retirement age to hit a given success rate, in today's dollars
+- **Theory tab** — renders the methodology notes from `THEORY.md` inside the
+  app
 - **Tested calculation engine** — core math lives in `retirement_model.py` and
   is covered by regression tests
 
@@ -84,16 +87,29 @@ OLLAMA_MODEL=llama3.2:3b
 Other models can be found in the Ollama model library:
 <https://ollama.com/library>
 
-**Jupyter Lab** (editable, code visible):
+## Deploying / sharing
+
+The app is designed to run as a Streamlit app with `app.py` as the entry point.
+To publish it on Streamlit Community Cloud, connect the GitHub repository and
+choose:
+
 ```
-pip install -r requirements.txt
-jupyter lab retirement_planner.ipynb
+app.py
 ```
 
-**Voilà** (legacy notebook dashboard):
+as the main file. Streamlit Community Cloud handles the Python environment from
+`requirements.txt`.
+
+Optional local AI help uses Ollama. On a hosted Streamlit deployment, AI help
+will only work if `OLLAMA_BASE_URL` points to an Ollama service reachable from
+the deployed app. Otherwise the planner still runs, but AI answers are
+unavailable.
+
+For hosts that require an explicit start command and provide a `$PORT`
+environment variable, use:
+
 ```
-pip install -r requirements.txt
-voila retirement_planner.ipynb
+streamlit run app.py --server.address 0.0.0.0 --server.port $PORT
 ```
 
 ## Testing
@@ -105,11 +121,6 @@ pytest
 The tests cover unit conversion, deterministic projections, contribution
 growth, spending curves, survivor Social Security behavior, Monte Carlo
 baselines, success grids, and summary calculations.
-
-## Running on Binder / iPad
-
-Click the **Launch on Binder** badge above to run the older Voilà notebook
-dashboard. The Streamlit app is now the primary local interface.
 
 ## Disclaimer
 
