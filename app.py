@@ -3,10 +3,12 @@
 from __future__ import annotations
 
 import json
+import hashlib
 from pathlib import Path
 from typing import Any
 
 import matplotlib.pyplot as plt
+from matplotlib.ticker import AutoMinorLocator
 import numpy as np
 import pandas as pd
 import streamlit as st
@@ -322,6 +324,65 @@ HELP_FOCUS_ALIASES = {
     "Monte Carlo paths": "Monte Carlo",
 }
 
+SCENARIO_WIDGET_KEYS = [
+    "scenario_name",
+    "current_age_slider",
+    "current_age_text",
+    "life_expectancy_slider",
+    "life_expectancy_text",
+    "target_retirement_age_slider",
+    "target_retirement_age_text",
+    "has_spouse",
+    "spouse_age_slider",
+    "spouse_age_text",
+    "spouse_life_expectancy_slider",
+    "spouse_life_expectancy_text",
+    "spouse_retirement_age_slider",
+    "spouse_retirement_age_text",
+    "survivor_spending_pct_slider",
+    "survivor_spending_pct_text",
+    "current_savings_text_only",
+    "annual_contribution_text_only",
+    "contribution_growth_rate_text_only",
+    "inflation_rate_slider",
+    "inflation_rate_text",
+    "pre_retirement_return_slider",
+    "pre_retirement_return_text",
+    "post_retirement_return_slider",
+    "post_retirement_return_text",
+    "return_volatility_slider",
+    "return_volatility_text",
+    "annual_expenses_text_only",
+    "spending_model",
+    "slow_go_age_slider",
+    "slow_go_age_text",
+    "slow_go_pct_slider",
+    "slow_go_pct_text",
+    "no_go_age_slider",
+    "no_go_age_text",
+    "no_go_pct_slider",
+    "no_go_pct_text",
+    "taper_start_age_slider",
+    "taper_start_age_text",
+    "taper_rate_pct_slider",
+    "taper_rate_pct_text",
+    "spending_is_after_tax",
+    "tax_mode",
+    "retirement_effective_tax_rate_text_only",
+    "social_security_monthly_text_only",
+    "social_security_start_age",
+    "spouse_ss_monthly_text_only",
+    "spouse_ss_start_age",
+    "has_pension",
+    "pension_monthly_slider",
+    "pension_monthly_text",
+    "pension_start_age_slider",
+    "pension_start_age_text",
+    "mc_choice",
+    "sweep_choice",
+    "grid_choice",
+]
+
 
 def fmt_money(value: float | None) -> str:
     if value is None:
@@ -374,12 +435,19 @@ def load_methodology_markdown() -> str:
     return Path("METHODOLOGY.md").read_text(encoding="utf-8")
 
 
-def load_uploaded_scenario() -> dict[str, Any] | None:
-    uploaded = st.sidebar.file_uploader("Load scenario", type="json")
+def reset_scenario_widget_state() -> None:
+    for key in SCENARIO_WIDGET_KEYS:
+        st.session_state.pop(key, None)
+
+
+def load_uploaded_scenario() -> tuple[dict[str, Any], str] | None:
+    uploaded = st.sidebar.file_uploader("Load scenario", type="json", key="scenario_upload")
     if uploaded is None:
         return None
+    payload = uploaded.getvalue()
+    upload_id = hashlib.sha256(payload).hexdigest()
     try:
-        return json.loads(uploaded.getvalue().decode("utf-8"))
+        return json.loads(payload.decode("utf-8")), upload_id
     except json.JSONDecodeError as exc:
         st.sidebar.error(f"Could not read scenario: {exc}")
         return None
@@ -396,11 +464,16 @@ def init_scenario() -> dict[str, Any]:
             st.session_state["scenario"] = scenario
         except Exception:
             pass
-    uploaded = load_uploaded_scenario()
-    if uploaded is not None:
+    uploaded_result = load_uploaded_scenario()
+    if uploaded_result is not None:
+        uploaded, upload_id = uploaded_result
+        if st.session_state.get("loaded_scenario_upload_id") == upload_id:
+            return scenario.copy()
         scenario = scenario_with_defaults(uploaded)
+        reset_scenario_widget_state()
         try:
             st.session_state["scenario"] = scenario
+            st.session_state["loaded_scenario_upload_id"] = upload_id
         except Exception:
             pass
     return scenario.copy()
@@ -931,7 +1004,9 @@ def build_sidebar(scenario: dict[str, Any]) -> dict[str, Any]:
     st.sidebar.caption("All dollar amounts are today's dollars unless noted.")
 
     scenario_name = st.sidebar.text_input(
-        "Scenario name", value=str(scenario.get("name", "Personal plan"))
+        "Scenario name",
+        value=str(scenario.get("name", "Personal plan")),
+        key="scenario_name",
     )
 
     with st.sidebar.expander("Household", expanded=True):
@@ -960,7 +1035,9 @@ def build_sidebar(scenario: dict[str, Any]) -> dict[str, Any]:
             help=help_tooltip("Target retirement age"),
         ))
         has_spouse = st.checkbox(
-            "Include spouse", value=bool(scenario.get("has_spouse", False))
+            "Include spouse",
+            value=bool(scenario.get("has_spouse", False)),
+            key="has_spouse",
         )
         if has_spouse:
             spouse_age = int(slider_text(
@@ -1096,6 +1173,7 @@ def build_sidebar(scenario: dict[str, Any]) -> dict[str, Any]:
             }.get,
             horizontal=True,
             help=help_tooltip("Spending model"),
+            key="spending_model",
             on_change=set_help_topic,
             args=("Spending model",),
         )
@@ -1119,6 +1197,7 @@ def build_sidebar(scenario: dict[str, Any]) -> dict[str, Any]:
             "Annual expenses are after-tax spending",
             value=bool(scenario.get("spending_is_after_tax", True)),
             help=help_tooltip("Taxes"),
+            key="spending_is_after_tax",
             on_change=set_help_topic,
             args=("Taxes",),
         )
@@ -1133,6 +1212,7 @@ def build_sidebar(scenario: dict[str, Any]) -> dict[str, Any]:
                 "simple_effective": "Simple effective rate",
             }.get,
             help=help_tooltip("Taxes"),
+            key="tax_mode",
             on_change=set_help_topic,
             args=("Taxes",),
         )
@@ -1160,6 +1240,7 @@ def build_sidebar(scenario: dict[str, Any]) -> dict[str, Any]:
             [62, 65, 67, 70],
             index=[62, 65, 67, 70].index(int(scenario["social_security_start_age"])),
             horizontal=True,
+            key="social_security_start_age",
         )
         if has_spouse:
             spouse_ss_monthly = float(text_value(
@@ -1175,6 +1256,7 @@ def build_sidebar(scenario: dict[str, Any]) -> dict[str, Any]:
                     int(scenario.get("spouse_ss_start_age", 67))
                 ),
                 horizontal=True,
+                key="spouse_ss_start_age",
             )
         else:
             spouse_ss_monthly = scenario.get(
@@ -1185,7 +1267,9 @@ def build_sidebar(scenario: dict[str, Any]) -> dict[str, Any]:
             )
 
         has_pension = st.checkbox(
-            "Include pension", value=bool(scenario.get("has_pension", False))
+            "Include pension",
+            value=bool(scenario.get("has_pension", False)),
+            key="has_pension",
         )
         if has_pension:
             pension_monthly = float(slider_text(
@@ -1222,6 +1306,7 @@ def build_sidebar(scenario: dict[str, Any]) -> dict[str, Any]:
             format_func=lambda label: f"{label} ({MC_SIM_OPTIONS[label]:,})",
             horizontal=True,
             help=help_tooltip("Monte Carlo"),
+            key="mc_choice",
             on_change=set_help_topic,
             args=("Monte Carlo",),
         )
@@ -1237,6 +1322,7 @@ def build_sidebar(scenario: dict[str, Any]) -> dict[str, Any]:
             ),
             format_func=lambda label: f"{label} ({SWEEP_SIM_OPTIONS[label]:,})",
             horizontal=True,
+            key="sweep_choice",
         )
         grid_choice = st.radio(
             "Balance grid paths per cell",
@@ -1248,6 +1334,7 @@ def build_sidebar(scenario: dict[str, Any]) -> dict[str, Any]:
             ),
             format_func=lambda label: f"{label} ({GRID_SIM_OPTIONS[label]:,})",
             horizontal=True,
+            key="grid_choice",
         )
         n_sims = MC_SIM_OPTIONS[mc_choice]
         sweep_sims = SWEEP_SIM_OPTIONS[sweep_choice]
@@ -1428,7 +1515,10 @@ def grid_chart(ages: list[int], balances: np.ndarray, grid: np.ndarray) -> plt.F
         ax.clabel(cs, fmt="%d%%", fontsize=9)
     ax.set_xlabel("Retirement age")
     ax.set_ylabel("Starting balance ($k, today's dollars)")
-    ax.grid(True, alpha=0.2)
+    ax.xaxis.set_minor_locator(AutoMinorLocator(2))
+    ax.yaxis.set_minor_locator(AutoMinorLocator(2))
+    ax.grid(True, which="major", alpha=0.25)
+    ax.grid(True, which="minor", alpha=0.28, linewidth=0.6)
     fig.tight_layout()
     return fig
 
