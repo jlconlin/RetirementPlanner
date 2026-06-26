@@ -22,7 +22,7 @@ and save or load scenario JSON files.
 - **Success rate sweep** — plots success rate across a range of retirement ages
 - **Balance &#215; age heatmap** — shows the portfolio balance you need at each
   retirement age to hit a given success rate, in today's dollars
-- **Theory tab** — renders the methodology notes from `THEORY.md` inside the
+- **Methodology tab** — renders the methodology notes from `METHODOLOGY.md` inside the
   app
 - **Tested calculation engine** — core math lives in `retirement_model.py` and
   is covered by regression tests
@@ -40,7 +40,7 @@ means &#36;60,000 of today's buying power, no matter how far in the future.
 
 For the full mathematical derivations, justification of every modeling choice,
 discussion of limitations, and citations to the academic literature, see
-[**THEORY.md**](THEORY.md).
+[**METHODOLOGY.md**](METHODOLOGY.md).
 
 ## Running locally
 
@@ -126,7 +126,7 @@ baselines, success grids, and summary calculations.
 
 This is a planning aid, not financial advice. The model makes significant
 simplifications — no taxes, no per-account modeling, constant real spending,
-normal-distribution returns. See [THEORY.md](THEORY.md) for a full discussion
+normal-distribution returns. See [METHODOLOGY.md](METHODOLOGY.md) for a full discussion
 of limitations and suggested extensions.
 
 ## License

@@ -39,12 +39,27 @@ st.set_page_config(
 )
 
 
+METHODOLOGY_SECTIONS = {
+    "§1.1": "1.1 Personal Timeline",
+    "§1.2": "1.2 Savings and Contributions",
+    "§1.3": "1.3 Returns and Inflation",
+    "§1.4": "1.4 Spending and Income",
+    "§2": "2. Modeling in Real (Inflation-Adjusted) Terms",
+    "§3": "3. The Accumulation Phase",
+    "§4": "4. The Retirement and Drawdown Phase",
+    "§5": "5. Income Offsets: Social Security and Pensions",
+    "§7": "7. Monte Carlo Simulation",
+    "§8": "8. Sequence-of-Returns Risk",
+    "§9": "9. Safe Withdrawal Rates and the 4% Rule",
+}
+
+
 INPUT_HELP = {
     "Current age": {
         "summary": "Your age today. This is the starting point for every projection.",
         "guidance": "Enter your current age in whole years.",
         "benchmarks": ["Range: 18-90"],
-        "theory": "§1.1",
+        "methodology": "§1.1",
     },
     "Life expectancy": {
         "summary": "How long the plan must stay solvent. Longer values are more conservative.",
@@ -54,7 +69,7 @@ INPUT_HELP = {
             "Couples: roughly 50% chance one survives to 90",
             "Median US male at 65: 84; female: 87",
         ],
-        "theory": "§1.1",
+        "methodology": "§1.1",
     },
     "Target retirement age": {
         "summary": "The age when contributions stop and portfolio withdrawals begin.",
@@ -67,13 +82,13 @@ INPUT_HELP = {
             "67: Social Security full retirement age for many workers",
             "70: maximum delayed Social Security benefit",
         ],
-        "theory": "§1.1",
+        "methodology": "§1.1",
     },
     "Current savings": {
         "summary": "Total investable assets today, in thousands of today's dollars.",
         "guidance": "Include retirement accounts and brokerage assets. Exclude home equity unless selling or borrowing against the home is part of the plan.",
         "benchmarks": ["4% rule implied portfolio target: 25x annual expenses"],
-        "theory": "§1.2",
+        "methodology": "§1.2",
     },
     "Annual contribution": {
         "summary": "Total household annual investment savings, in thousands of today's dollars.",
@@ -83,7 +98,7 @@ INPUT_HELP = {
             "2026 401(k) catch-up: $8,000 for ages 50-59 and 64+; $11,250 for ages 60-63",
             "2026 IRA limit: $7,500; catch-up $1,100 for age 50+",
         ],
-        "theory": "§1.2",
+        "methodology": "§1.2",
     },
     "Contribution growth": {
         "summary": "Real annual growth in contributions above inflation.",
@@ -93,7 +108,7 @@ INPUT_HELP = {
             "Modest salary growth: 2-4%",
             "Aggressive growth: 4-6%",
         ],
-        "theory": "§1.2",
+        "methodology": "§1.2",
     },
     "Inflation": {
         "summary": "Expected long-run inflation. The planner converts nominal returns into real returns.",
@@ -103,7 +118,7 @@ INPUT_HELP = {
             "US historical average 1990-2024 CPI: about 2.8%",
             "Conservative elevated-inflation scenario: 3.0-4.0%",
         ],
-        "theory": "§1.3, §2",
+        "methodology": "§1.3, §2",
     },
     "Pre-retirement return": {
         "summary": "Expected nominal annual investment return while working.",
@@ -115,7 +130,7 @@ INPUT_HELP = {
             "40/60 stock/bond mix: 6-8%",
             "Conservative forward-looking default: 7%",
         ],
-        "theory": "§1.3, §3",
+        "methodology": "§1.3, §3",
     },
     "Post-retirement return": {
         "summary": "Expected nominal annual investment return after retirement.",
@@ -126,7 +141,7 @@ INPUT_HELP = {
             "40/60 stock/bond mix: 6-8%",
             "20/80 conservative mix: 5-7%",
         ],
-        "theory": "§1.3, §4, §8",
+        "methodology": "§1.3, §4, §8",
     },
     "Volatility": {
         "summary": "Annual return standard deviation used in Monte Carlo simulations.",
@@ -138,7 +153,7 @@ INPUT_HELP = {
             "100% bonds: 5-8%",
             "Default, roughly 60-70% equity: 12%",
         ],
-        "theory": "§1.3, §7",
+        "methodology": "§1.3, §7",
     },
     "Annual expenses": {
         "summary": "Total annual retirement spending before Social Security or pension offsets.",
@@ -148,7 +163,7 @@ INPUT_HELP = {
             "4% rule implied portfolio: 25x this figure",
             "Median US household spending in retirement, BLS 2023: about $52k/year",
         ],
-        "theory": "§1.4",
+        "methodology": "§1.4",
     },
     "Spending model": {
         "summary": "How real spending changes with age. Flat spending is the most conservative option.",
@@ -158,7 +173,7 @@ INPUT_HELP = {
             "Taper: fixed annual decline after a start age; default is 1.5% per year after 75",
             "Research basis: Blanchett 2014 retirement spending smile",
         ],
-        "theory": "§1.4",
+        "methodology": "§1.4",
     },
     "Social Security": {
         "summary": "Monthly Social Security benefit in today's dollars for the selected claiming age.",
@@ -170,7 +185,7 @@ INPUT_HELP = {
             "Claiming age versus FRA: age 62 is about 25-30% lower; age 70 is about 24% higher",
             "Break-even for delaying from 67 to 70: roughly age 82-83",
         ],
-        "theory": "§1.4, §5",
+        "methodology": "§1.4, §5",
     },
     "Pension": {
         "summary": "Monthly defined-benefit pension income and the age when it begins.",
@@ -179,7 +194,7 @@ INPUT_HELP = {
             "Most pension statements quote a monthly benefit directly",
             "If the pension has no cost-of-living adjustment, consider using a more conservative value",
         ],
-        "theory": "§1.4, §5",
+        "methodology": "§1.4, §5",
     },
     "Monte Carlo": {
         "summary": "Number of random return paths used to estimate success rates.",
@@ -191,7 +206,7 @@ INPUT_HELP = {
             "Conservative planning target: at least 90% success",
             "Moderate planning target: at least 80% success",
         ],
-        "theory": "§7, §9",
+        "methodology": "§7, §9",
     },
 }
 
@@ -210,8 +225,8 @@ def help_ai_text(topic: str) -> str:
     if benchmarks:
         lines.append("Benchmarks:")
         lines.extend(f"- {item}" for item in benchmarks)
-    if help_record.get("theory"):
-        lines.append(f"Theory reference: {help_record['theory']}")
+    if help_record.get("methodology"):
+        lines.append(f"Methodology reference: {help_record['methodology']}")
     return "\n".join(lines)
 
 
@@ -271,7 +286,7 @@ VIEWS = [
     "Retirement Age",
     "Required Balance",
     "Cash Flows",
-    "Theory",
+    "Methodology",
 ]
 
 HELP_FOCUS_ALIASES = {
@@ -337,8 +352,8 @@ def as_display_table(df: pd.DataFrame) -> pd.DataFrame:
 
 
 @st.cache_data(show_spinner=False)
-def load_theory_markdown() -> str:
-    return Path("THEORY.md").read_text(encoding="utf-8")
+def load_methodology_markdown() -> str:
+    return Path("METHODOLOGY.md").read_text(encoding="utf-8")
 
 
 def load_uploaded_scenario() -> dict[str, Any] | None:
@@ -556,6 +571,7 @@ def focus_help_widget(selected_topic: str, show_selector: bool = True) -> None:
     """Render help that updates immediately when sidebar inputs receive focus."""
     topics_json = json.dumps(INPUT_HELP)
     aliases_json = json.dumps(HELP_FOCUS_ALIASES)
+    methodology_sections_json = json.dumps(METHODOLOGY_SECTIONS)
     selected_json = json.dumps(selected_topic)
     selector_markup = """
           <label for="help-select">Choose an input</label>
@@ -572,6 +588,7 @@ def focus_help_widget(selected_topic: str, show_selector: bool = True) -> None:
         <script>
         const topics = {topics_json};
         const aliases = {aliases_json};
+        const methodologySections = {methodology_sections_json};
         const initialTopic = {selected_json};
         const select = document.getElementById("help-select");
         const info = document.getElementById("help-info");
@@ -601,8 +618,8 @@ def focus_help_widget(selected_topic: str, show_selector: bool = True) -> None:
               </section>
             `
             : "";
-          const theory = record.theory
-            ? `<div class="help-theory">Theory tab: ${{escapeHtml(record.theory)}}</div>`
+          const methodology = record.methodology
+            ? `<div class="help-methodology">Methodology: ${{methodologyLinks(record.methodology)}}</div>`
             : "";
           info.innerHTML = `
             <div class="help-grid">
@@ -612,7 +629,7 @@ def focus_help_widget(selected_topic: str, show_selector: bool = True) -> None:
               </section>
               ${{benchmarkBlock}}
             </div>
-            ${{theory}}
+            ${{methodology}}
           `;
         }}
 
@@ -623,6 +640,37 @@ def focus_help_widget(selected_topic: str, show_selector: bool = True) -> None:
             .replaceAll(">", "&gt;")
             .replaceAll('"', "&quot;")
             .replaceAll("'", "&#039;");
+        }}
+
+        function methodologyLinks(referenceText) {{
+          return String(referenceText)
+            .split(",")
+            .map((reference) => reference.trim())
+            .filter(Boolean)
+            .map((reference) => {{
+              const section = methodologySections[reference] || "";
+              return `<a href="#" data-section="${{escapeHtml(section)}}">${{escapeHtml(reference)}}</a>`;
+            }})
+            .join(", ");
+        }}
+
+        function openMethodologySection(sectionTitle) {{
+          try {{
+            const parentDoc = window.parent.document;
+            const methodologyTab = Array.from(parentDoc.querySelectorAll("button"))
+              .find((button) => button.textContent.trim() === "Methodology");
+            if (methodologyTab) methodologyTab.click();
+
+            window.setTimeout(() => {{
+              const headings = Array.from(parentDoc.querySelectorAll("h1, h2, h3, h4"));
+              const target = headings.find((heading) => heading.textContent.trim() === sectionTitle);
+              if (target) {{
+                target.scrollIntoView({{ behavior: "smooth", block: "start" }});
+              }}
+            }}, 250);
+          }} catch (error) {{
+            // The Methodology tab remains available if browser internals change.
+          }}
         }}
 
         function topicForElement(element) {{
@@ -641,6 +689,12 @@ def focus_help_widget(selected_topic: str, show_selector: bool = True) -> None:
         }}
 
         select.addEventListener("change", () => render(select.value));
+        info.addEventListener("click", (event) => {{
+          const link = event.target.closest("a[data-section]");
+          if (!link) return;
+          event.preventDefault();
+          openMethodologySection(link.dataset.section);
+        }});
 
         try {{
           window.parent.document.addEventListener("focusin", (event) => {{
@@ -733,10 +787,19 @@ def focus_help_widget(selected_topic: str, show_selector: bool = True) -> None:
         .help-context li {{
           margin: 0.25rem 0;
         }}
-        .help-theory {{
+        .help-methodology {{
           color: rgb(101, 106, 118);
           font-size: 0.86rem;
           padding-left: 0.1rem;
+        }}
+        .help-methodology a {{
+          color: rgb(46, 117, 182);
+          cursor: pointer;
+          text-decoration: none;
+          font-weight: 600;
+        }}
+        .help-methodology a:hover {{
+          text-decoration: underline;
         }}
         </style>
         """,
@@ -1355,7 +1418,7 @@ else:
     sweep_tab,
     grid_tab,
     cashflow_tab,
-    theory_tab,
+    methodology_tab,
 ) = st.tabs(VIEWS, default="Overview")
 
 with overview_tab:
@@ -1426,8 +1489,8 @@ with cashflow_tab:
     st.subheader("Year-by-Year Cash Flows")
     st.dataframe(as_display_table(projection), hide_index=True, width="stretch")
 
-with theory_tab:
-    st.markdown(load_theory_markdown())
+with methodology_tab:
+    st.markdown(load_methodology_markdown())
 
 with help_tab:
     ensure_help_topic_state()

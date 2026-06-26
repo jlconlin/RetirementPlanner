@@ -1,4 +1,4 @@
-# Retirement Planner — Theory & Methodology
+# Retirement Planner Methodology
 
 This document describes the mathematical foundations of the retirement planner, justifies the modeling choices made, and provides references to the academic and professional literature that supports them. It also records the limitations baked into the model and suggests directions for future extension.
 
