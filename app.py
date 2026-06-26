@@ -9,6 +9,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import streamlit as st
+import streamlit.components.v1 as components
 
 from retirement_model import (
     DEFAULT_SCENARIO,
@@ -65,14 +66,33 @@ GRID_SIM_OPTIONS = {
     "Detailed": 750,
 }
 VIEWS = [
+    "Help",
     "Overview",
     "Monte Carlo",
     "Retirement Age",
     "Required Balance",
     "Cash Flows",
     "Assumptions",
-    "Help",
 ]
+
+HELP_FOCUS_ALIASES = {
+    "Current age": "Current age",
+    "Life expectancy": "Life expectancy",
+    "Target retirement age": "Target retirement age",
+    "Current savings": "Current savings",
+    "Annual contribution": "Annual contribution",
+    "Contribution growth": "Contribution growth",
+    "Inflation rate": "Inflation",
+    "Pre-retirement return": "Pre-retirement return",
+    "Post-retirement return": "Post-retirement return",
+    "Return volatility": "Volatility",
+    "Annual expenses": "Annual expenses",
+    "Spending model": "Spending model",
+    "Social Security monthly": "Social Security",
+    "Spouse SS monthly": "Social Security",
+    "Pension monthly": "Pension",
+    "Monte Carlo paths": "Monte Carlo",
+}
 
 
 def fmt_money(value: float | None) -> str:
@@ -176,6 +196,11 @@ def _parse_numeric(text: str, integer: bool) -> int | float | None:
     return int(round(value)) if integer else value
 
 
+def set_help_topic(topic: str | None) -> None:
+    if topic in HELP_TEXT:
+        st.session_state["selected_help_input"] = topic
+
+
 def slider_text(
     label: str,
     min_value: int | float,
@@ -185,6 +210,7 @@ def slider_text(
     *,
     key: str,
     help: str | None = None,
+    help_topic: str | None = None,
     allow_above_slider: bool = False,
 ) -> int | float:
     """Render a slider paired with a plain text input for exact entry."""
@@ -209,13 +235,16 @@ def slider_text(
         st.session_state[text_key] = _format_numeric(
             st.session_state[slider_key], integer
         )
+        set_help_topic(help_topic or label)
 
     def sync_slider_from_text() -> None:
         parsed = _parse_numeric(st.session_state.get(text_key, ""), integer)
         if parsed is None:
+            set_help_topic(help_topic or label)
             return
         if min_value <= parsed <= max_value:
             st.session_state[slider_key] = parsed
+        set_help_topic(help_topic or label)
 
     slider_col, text_col = st.columns([0.68, 0.32])
     with slider_col:
@@ -233,7 +262,7 @@ def slider_text(
         slider_result = st.slider(**slider_kwargs)
     with text_col:
         text_result = st.text_input(
-            "Exact value",
+            f"{label} exact value",
             key=text_key,
             label_visibility="collapsed",
             on_change=sync_slider_from_text,
@@ -260,6 +289,7 @@ def text_value(
     min_value: int | float = 0,
     integer: bool = False,
     help: str | None = None,
+    help_topic: str | None = None,
     inline: bool = False,
 ) -> int | float:
     """Render a plain text input and return a validated numeric value."""
@@ -269,6 +299,9 @@ def text_value(
             st.session_state[text_key] = _format_numeric(value, integer)
     except Exception:
         pass
+
+    def mark_help_topic() -> None:
+        set_help_topic(help_topic or label)
 
     if inline:
         label_col, input_col = st.columns([0.64, 0.36], vertical_alignment="center")
@@ -280,9 +313,10 @@ def text_value(
                 key=text_key,
                 help=help,
                 label_visibility="collapsed",
+                on_change=mark_help_topic,
             )
     else:
-        text = st.text_input(label, key=text_key, help=help)
+        text = st.text_input(label, key=text_key, help=help, on_change=mark_help_topic)
     parsed = _parse_numeric(text, integer)
     if parsed is None:
         st.warning(f"'{text}' is not a valid value for {label}.")
@@ -298,6 +332,118 @@ def _option_for_value(options: dict[str, int], value: int, default: str) -> str:
         if option_value == value:
             return label
     return default
+
+
+def analysis_age_range(assumptions: dict[str, Any], step: int = 1) -> list[int]:
+    """Candidate retirement ages through the planning horizon."""
+    start = max(assumptions["current_age"] + 1, 50)
+    life_expectancy = assumptions["life_expectancy"]
+    if start > life_expectancy:
+        return []
+    ages = list(range(start, life_expectancy + 1, step))
+    if ages[-1] != life_expectancy:
+        ages.append(life_expectancy)
+    return ages
+
+
+def focus_help_widget(selected_topic: str) -> None:
+    """Render help that updates immediately when sidebar inputs receive focus."""
+    topics_json = json.dumps(HELP_TEXT)
+    aliases_json = json.dumps(HELP_FOCUS_ALIASES)
+    selected_json = json.dumps(selected_topic)
+    components.html(
+        f"""
+        <div class="help-shell">
+          <label for="help-select">Choose an input</label>
+          <select id="help-select"></select>
+          <div id="help-info"></div>
+        </div>
+        <script>
+        const topics = {topics_json};
+        const aliases = {aliases_json};
+        const initialTopic = {selected_json};
+        const select = document.getElementById("help-select");
+        const info = document.getElementById("help-info");
+
+        Object.keys(topics).sort().forEach((topic) => {{
+          const option = document.createElement("option");
+          option.value = topic;
+          option.textContent = topic;
+          select.appendChild(option);
+        }});
+
+        function render(topic) {{
+          if (!topics[topic]) return;
+          select.value = topic;
+          info.textContent = topics[topic];
+        }}
+
+        function topicForElement(element) {{
+          const text = [
+            element.getAttribute("aria-label"),
+            element.getAttribute("title"),
+            element.placeholder,
+            element.innerText,
+            element.textContent,
+          ].filter(Boolean).join(" ");
+
+          for (const [label, topic] of Object.entries(aliases)) {{
+            if (text.includes(label)) return topic;
+          }}
+          return null;
+        }}
+
+        select.addEventListener("change", () => render(select.value));
+
+        try {{
+          window.parent.document.addEventListener("focusin", (event) => {{
+            const topic = topicForElement(event.target);
+            if (topic) render(topic);
+          }}, true);
+          window.parent.document.addEventListener("click", (event) => {{
+            const topic = topicForElement(event.target);
+            if (topic) render(topic);
+          }}, true);
+        }} catch (error) {{
+          // If browser sandboxing changes, manual selection still works.
+        }}
+
+        render(initialTopic);
+        </script>
+        <style>
+        .help-shell {{
+          font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+          color: rgb(49, 51, 63);
+        }}
+        label {{
+          display: block;
+          font-size: 0.9rem;
+          font-weight: 600;
+          margin-bottom: 0.35rem;
+        }}
+        select {{
+          box-sizing: border-box;
+          width: 100%;
+          min-height: 2.5rem;
+          border: 1px solid rgba(49, 51, 63, 0.2);
+          border-radius: 0.5rem;
+          padding: 0.45rem 0.6rem;
+          background: white;
+          color: rgb(49, 51, 63);
+          font-size: 1rem;
+        }}
+        #help-info {{
+          margin-top: 0.75rem;
+          padding: 0.85rem 1rem;
+          border-radius: 0.5rem;
+          background: rgb(232, 244, 255);
+          color: rgb(20, 48, 86);
+          line-height: 1.45;
+        }}
+        </style>
+        """,
+        height=180,
+    )
 
 
 def build_sidebar(scenario: dict[str, Any]) -> dict[str, Any]:
@@ -387,6 +533,7 @@ def build_sidebar(scenario: dict[str, Any]) -> dict[str, Any]:
             float(scenario["current_savings"]),
             key="current_savings",
             help=HELP_TEXT["Current savings"],
+            help_topic="Current savings",
             inline=True,
         ))
         annual_contribution = float(text_value(
@@ -394,6 +541,7 @@ def build_sidebar(scenario: dict[str, Any]) -> dict[str, Any]:
             float(scenario["annual_contribution"]),
             key="annual_contribution",
             help=HELP_TEXT["Annual contribution"],
+            help_topic="Annual contribution",
             inline=True,
         ))
         contribution_growth_rate = float(text_value(
@@ -401,6 +549,7 @@ def build_sidebar(scenario: dict[str, Any]) -> dict[str, Any]:
             float(scenario["contribution_growth_rate"]),
             key="contribution_growth_rate",
             help=HELP_TEXT["Contribution growth"],
+            help_topic="Contribution growth",
             inline=True,
         ))
 
@@ -413,6 +562,7 @@ def build_sidebar(scenario: dict[str, Any]) -> dict[str, Any]:
             step=0.25,
             key="inflation_rate",
             help=HELP_TEXT["Inflation"],
+            help_topic="Inflation",
         ))
         pre_retirement_return = float(slider_text(
             "Pre-retirement return (nominal %)",
@@ -422,6 +572,7 @@ def build_sidebar(scenario: dict[str, Any]) -> dict[str, Any]:
             step=0.25,
             key="pre_retirement_return",
             help=HELP_TEXT["Pre-retirement return"],
+            help_topic="Pre-retirement return",
         ))
         post_retirement_return = float(slider_text(
             "Post-retirement return (nominal %)",
@@ -431,6 +582,7 @@ def build_sidebar(scenario: dict[str, Any]) -> dict[str, Any]:
             step=0.25,
             key="post_retirement_return",
             help=HELP_TEXT["Post-retirement return"],
+            help_topic="Post-retirement return",
         ))
         return_volatility = float(slider_text(
             "Return volatility (%)",
@@ -440,6 +592,7 @@ def build_sidebar(scenario: dict[str, Any]) -> dict[str, Any]:
             step=0.5,
             key="return_volatility",
             help=HELP_TEXT["Volatility"],
+            help_topic="Volatility",
         ))
 
     with st.sidebar.expander("Spending", expanded=True):
@@ -448,6 +601,7 @@ def build_sidebar(scenario: dict[str, Any]) -> dict[str, Any]:
             float(scenario["annual_expenses"]),
             key="annual_expenses",
             help=HELP_TEXT["Annual expenses"],
+            help_topic="Annual expenses",
         ))
         spending_model = st.radio(
             "Spending model",
@@ -462,6 +616,8 @@ def build_sidebar(scenario: dict[str, Any]) -> dict[str, Any]:
             }.get,
             horizontal=True,
             help=HELP_TEXT["Spending model"],
+            on_change=set_help_topic,
+            args=("Spending model",),
         )
         slow_go_age = scenario.get("slow_go_age", 75)
         slow_go_pct = scenario.get("slow_go_pct", 80.0)
@@ -484,6 +640,7 @@ def build_sidebar(scenario: dict[str, Any]) -> dict[str, Any]:
             float(scenario["social_security_monthly"]),
             key="social_security_monthly",
             help=HELP_TEXT["Social Security"],
+            help_topic="Social Security",
         ))
         social_security_start_age = st.radio(
             "Social Security start age",
@@ -496,6 +653,7 @@ def build_sidebar(scenario: dict[str, Any]) -> dict[str, Any]:
                 "Spouse SS monthly ($k)",
                 float(scenario.get("spouse_ss_monthly", 1.5)),
                 key="spouse_ss_monthly",
+                help_topic="Social Security",
             ))
             spouse_ss_start_age = st.radio(
                 "Spouse SS start age",
@@ -525,6 +683,7 @@ def build_sidebar(scenario: dict[str, Any]) -> dict[str, Any]:
                 step=0.1,
                 key="pension_monthly",
                 help=HELP_TEXT["Pension"],
+                help_topic="Pension",
                 allow_above_slider=True,
             ))
             pension_start_age = int(slider_text(
@@ -550,6 +709,8 @@ def build_sidebar(scenario: dict[str, Any]) -> dict[str, Any]:
             format_func=lambda label: f"{label} ({MC_SIM_OPTIONS[label]:,})",
             horizontal=True,
             help=HELP_TEXT["Monte Carlo"],
+            on_change=set_help_topic,
+            args=("Monte Carlo",),
         )
         sweep_choice = st.radio(
             "Retirement age paths per age",
@@ -639,10 +800,8 @@ def cached_monte_carlo(scenario_json: str, n_sims: int) -> dict[str, Any]:
 def cached_sweep(scenario_json: str, sweep_sims: int) -> pd.DataFrame:
     scenario = json.loads(scenario_json)
     assumptions = scenario_to_assumptions(scenario)
-    start = max(assumptions["current_age"] + 1, 50)
-    end = min(assumptions["life_expectancy"], 81)
     rows = []
-    for age in range(start, end):
+    for age in analysis_age_range(assumptions):
         rate, _ = monte_carlo_summary(
             assumptions, retirement_age=age, n_sims=sweep_sims
         )["success_rate"], None
@@ -654,13 +813,7 @@ def cached_sweep(scenario_json: str, sweep_sims: int) -> pd.DataFrame:
 def cached_grid(scenario_json: str, grid_sims: int) -> tuple[list[int], np.ndarray, np.ndarray]:
     scenario = json.loads(scenario_json)
     assumptions = scenario_to_assumptions(scenario)
-    ages = list(
-        range(
-            max(assumptions["current_age"] + 1, 50),
-            min(assumptions["life_expectancy"], 81),
-            2,
-        )
-    )
+    ages = analysis_age_range(assumptions, step=2)
     low = assumptions["current_savings"] * 0.25
     high = max(assumptions["current_savings"] * 8.0, assumptions["annual_expenses"] * 30)
     balances = np.linspace(low, high, 14)
@@ -796,8 +949,8 @@ else:
         "Open Monte Carlo to check sequence-of-returns risk."
     )
 
-overview_tab, mc_tab, sweep_tab, grid_tab, cashflow_tab, assumptions_tab, help_tab = st.tabs(
-    VIEWS
+help_tab, overview_tab, mc_tab, sweep_tab, grid_tab, cashflow_tab, assumptions_tab = st.tabs(
+    VIEWS, default="Overview"
 )
 
 with overview_tab:
@@ -882,8 +1035,9 @@ with assumptions_tab:
 
 with help_tab:
     st.subheader("Input Help")
-    selected = st.selectbox("Choose an input", sorted(HELP_TEXT))
-    st.info(HELP_TEXT[selected])
+    if st.session_state.get("selected_help_input") not in HELP_TEXT:
+        st.session_state["selected_help_input"] = "Current age"
+    focus_help_widget(st.session_state["selected_help_input"])
     st.markdown(
         """
         **Model reminders**
