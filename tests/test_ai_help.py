@@ -4,7 +4,7 @@ from unittest.mock import patch
 
 import pytest
 
-from ai_help import AIHelpError, ask_ai_help, ask_ollama, build_ai_prompt
+from ai_help import AIHelpError, ai_help_enabled, ask_ai_help, ask_ollama, build_ai_prompt
 
 
 class FakeResponse:
@@ -81,3 +81,24 @@ def test_ask_ollama_reports_unavailable_service():
 def test_ask_ai_help_rejects_empty_question():
     with pytest.raises(AIHelpError, match="Enter a question"):
         ask_ai_help(" ", {}, "Current age", "Your age today.")
+
+
+def test_ai_help_enabled_defaults_on_locally(monkeypatch):
+    monkeypatch.delenv("AI_HELP_ENABLED", raising=False)
+    monkeypatch.delenv("STREAMLIT_RUNTIME_ENV", raising=False)
+    monkeypatch.delenv("STREAMLIT_SHARING_MODE", raising=False)
+
+    assert ai_help_enabled() is True
+
+
+def test_ai_help_enabled_can_be_disabled(monkeypatch):
+    monkeypatch.setenv("AI_HELP_ENABLED", "false")
+
+    assert ai_help_enabled() is False
+
+
+def test_ai_help_enabled_defaults_off_on_streamlit_cloud(monkeypatch):
+    monkeypatch.delenv("AI_HELP_ENABLED", raising=False)
+    monkeypatch.setenv("STREAMLIT_RUNTIME_ENV", "cloud")
+
+    assert ai_help_enabled() is False

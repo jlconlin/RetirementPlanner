@@ -80,6 +80,7 @@ environment variables control the integration:
 
 ```
 AI_HELP_PROVIDER=ollama
+AI_HELP_ENABLED=true
 OLLAMA_BASE_URL=http://localhost:11434
 OLLAMA_MODEL=llama3.2:3b
 ```
@@ -101,9 +102,10 @@ as the main file. Streamlit Community Cloud handles the Python environment from
 `requirements.txt`.
 
 Optional local AI help uses Ollama. On a hosted Streamlit deployment, AI help
-will only work if `OLLAMA_BASE_URL` points to an Ollama service reachable from
-the deployed app. Otherwise the planner still runs, but AI answers are
-unavailable.
+is hidden by default because local Ollama is not reachable from the hosted app.
+Set `AI_HELP_ENABLED=false` explicitly to hide it on any host. Set
+`AI_HELP_ENABLED=true` only if `OLLAMA_BASE_URL` points to an Ollama service
+reachable from the deployed app.
 
 For hosts that require an explicit start command and provide a `$PORT`
 environment variable, use:

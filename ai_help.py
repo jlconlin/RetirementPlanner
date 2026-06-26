@@ -11,10 +11,38 @@ from typing import Any
 
 DEFAULT_OLLAMA_BASE_URL = "http://localhost:11434"
 DEFAULT_OLLAMA_MODEL = "llama3.2:3b"
+FALSE_VALUES = {"0", "false", "no", "off", "disabled"}
+TRUE_VALUES = {"1", "true", "yes", "on", "enabled"}
 
 
 class AIHelpError(RuntimeError):
     """Raised when local AI help cannot complete a request."""
+
+
+def _env_flag(name: str) -> bool | None:
+    value = os.environ.get(name)
+    if value is None:
+        return None
+    normalized = value.strip().lower()
+    if normalized in TRUE_VALUES:
+        return True
+    if normalized in FALSE_VALUES:
+        return False
+    return None
+
+
+def ai_help_enabled() -> bool:
+    """Return whether optional AI help should be shown."""
+    configured = _env_flag("AI_HELP_ENABLED")
+    if configured is not None:
+        return configured
+
+    runtime_env = os.environ.get("STREAMLIT_RUNTIME_ENV", "").strip().lower()
+    sharing_mode = os.environ.get("STREAMLIT_SHARING_MODE", "").strip().lower()
+    if runtime_env == "cloud" or sharing_mode:
+        return False
+
+    return True
 
 
 def ai_help_config() -> dict[str, str]:

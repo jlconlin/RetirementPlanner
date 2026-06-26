@@ -16,6 +16,7 @@ from ai_help import (
     DEFAULT_OLLAMA_BASE_URL,
     DEFAULT_OLLAMA_MODEL,
     AIHelpError,
+    ai_help_enabled,
     ai_help_config,
     ask_ai_help,
 )
@@ -1522,10 +1523,15 @@ with methodology_tab:
 
 with help_tab:
     ensure_help_topic_state()
-    ai_col, input_help_col = st.columns([0.48, 0.52], gap="large")
-    with ai_col:
-        ai_help_panel(scenario)
-    with input_help_col:
+    if ai_help_enabled():
+        ai_col, input_help_col = st.columns([0.48, 0.52], gap="large")
+        with ai_col:
+            ai_help_panel(scenario)
+        input_help_container = input_help_col
+    else:
+        input_help_container = st.container()
+
+    with input_help_container:
         st.subheader("Input Help")
         topic_options = sorted(INPUT_HELP)
         st.selectbox(
