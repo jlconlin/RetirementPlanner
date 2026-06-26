@@ -215,6 +215,40 @@ def help_ai_text(topic: str) -> str:
     return "\n".join(lines)
 
 
+def default_ai_question(topic: str) -> str:
+    return f"What is a reasonable way to estimate {topic.lower()}?"
+
+
+def sync_selected_help_topic() -> None:
+    topic = st.session_state.get("selected_help_input")
+    if topic in INPUT_HELP:
+        st.session_state["ai_help_context"] = topic
+        st.session_state["ai_help_question"] = default_ai_question(topic)
+
+
+def sync_ai_help_context() -> None:
+    topic = st.session_state.get("ai_help_context")
+    if topic in INPUT_HELP:
+        st.session_state["selected_help_input"] = topic
+        st.session_state["ai_help_question"] = default_ai_question(topic)
+
+
+def ensure_help_topic_state() -> None:
+    selected_topic = st.session_state.get("selected_help_input")
+    if selected_topic not in INPUT_HELP:
+        selected_topic = "Current age"
+        st.session_state["selected_help_input"] = selected_topic
+
+    ai_topic = st.session_state.get("ai_help_context")
+    if ai_topic not in INPUT_HELP:
+        st.session_state["ai_help_context"] = selected_topic
+
+    if "ai_help_question" not in st.session_state:
+        st.session_state["ai_help_question"] = default_ai_question(
+            st.session_state["ai_help_context"]
+        )
+
+
 MC_SIM_OPTIONS = {
     "Quick": 500,
     "Standard": 1_000,
@@ -369,6 +403,8 @@ def _parse_numeric(text: str, integer: bool) -> int | float | None:
 def set_help_topic(topic: str | None) -> None:
     if topic in INPUT_HELP:
         st.session_state["selected_help_input"] = topic
+        st.session_state["ai_help_context"] = topic
+        st.session_state["ai_help_question"] = default_ai_question(topic)
 
 
 def slider_text(
@@ -516,16 +552,21 @@ def analysis_age_range(assumptions: dict[str, Any], step: int = 1) -> list[int]:
     return ages
 
 
-def focus_help_widget(selected_topic: str) -> None:
+def focus_help_widget(selected_topic: str, show_selector: bool = True) -> None:
     """Render help that updates immediately when sidebar inputs receive focus."""
     topics_json = json.dumps(INPUT_HELP)
     aliases_json = json.dumps(HELP_FOCUS_ALIASES)
     selected_json = json.dumps(selected_topic)
+    selector_markup = """
+          <label for="help-select">Choose an input</label>
+          <select id="help-select"></select>
+    """ if show_selector else """
+          <select id="help-select" aria-hidden="true"></select>
+    """
     components.html(
         f"""
         <div class="help-shell">
-          <label for="help-select">Choose an input</label>
-          <select id="help-select"></select>
+{selector_markup}
           <div id="help-info"></div>
         </div>
         <script>
@@ -638,6 +679,9 @@ def focus_help_widget(selected_topic: str) -> None:
           color: rgb(49, 51, 63);
           font-size: 1rem;
         }}
+        select[aria-hidden="true"] {{
+          display: none;
+        }}
         #help-info {{
           margin-top: 0.75rem;
           display: grid;
@@ -645,8 +689,8 @@ def focus_help_widget(selected_topic: str) -> None:
         }}
         .help-grid {{
           display: grid;
-          grid-template-columns: minmax(0, 0.95fr) minmax(0, 1.05fr);
-          gap: 0.75rem;
+          grid-template-columns: 1fr;
+          gap: 0.65rem;
           align-items: start;
         }}
         .help-card {{
@@ -690,14 +734,9 @@ def focus_help_widget(selected_topic: str) -> None:
           font-size: 0.86rem;
           padding-left: 0.1rem;
         }}
-        @media (max-width: 700px) {{
-          .help-grid {{
-            grid-template-columns: 1fr;
-          }}
-        }}
         </style>
         """,
-        height=260,
+        height=340,
     )
 
 
@@ -708,7 +747,7 @@ def ai_help_panel(scenario: dict[str, Any]) -> None:
         st.warning(f"Unsupported AI_HELP_PROVIDER: `{config['provider']}`")
         return
 
-    ai_header, setup_col, _ = st.columns([0.26, 0.16, 0.58], vertical_alignment="center")
+    ai_header, setup_col, _ = st.columns([0.58, 0.18, 0.24], vertical_alignment="center")
     with ai_header:
         st.subheader("Ask Local AI")
     setup_text = f"""
@@ -736,18 +775,15 @@ def ai_help_panel(scenario: dict[str, Any]) -> None:
                 st.markdown(setup_text)
 
     topic_options = sorted(INPUT_HELP)
-    default_topic = st.session_state.get("selected_help_input", "Current age")
-    if default_topic not in INPUT_HELP:
-        default_topic = "Current age"
     selected_input = st.selectbox(
-        "Ask about",
+        "Context",
         topic_options,
-        index=topic_options.index(default_topic),
-        key="ai_help_topic",
+        key="ai_help_context",
+        on_change=sync_ai_help_context,
     )
     question = st.text_area(
         "Question",
-        value=f"What is a reasonable way to estimate {selected_input.lower()}?",
+        value=default_ai_question(selected_input),
         height=90,
         key="ai_help_question",
     )
@@ -1358,11 +1394,20 @@ with theory_tab:
     st.markdown(load_theory_markdown())
 
 with help_tab:
-    st.subheader("Input Help")
-    if st.session_state.get("selected_help_input") not in INPUT_HELP:
-        st.session_state["selected_help_input"] = "Current age"
-    focus_help_widget(st.session_state["selected_help_input"])
-    ai_help_panel(scenario)
+    ensure_help_topic_state()
+    ai_col, input_help_col = st.columns([0.48, 0.52], gap="large")
+    with ai_col:
+        ai_help_panel(scenario)
+    with input_help_col:
+        st.subheader("Input Help")
+        topic_options = sorted(INPUT_HELP)
+        st.selectbox(
+            "Choose an input",
+            topic_options,
+            key="selected_help_input",
+            on_change=sync_selected_help_topic,
+        )
+        focus_help_widget(st.session_state["selected_help_input"], show_selector=False)
     st.markdown(
         """
         **Model reminders**
