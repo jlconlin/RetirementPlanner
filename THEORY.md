@@ -323,7 +323,7 @@ The break-even age for delayed claiming (67 vs. 70) is approximately 82–83, me
 
 All Social Security amounts in the model are in **today's dollars**. In reality, benefits are adjusted annually by the **Cost-of-Living Adjustment** (COLA), which approximately tracks CPI-W. In a real-terms model, this adjustment is implicit: a constant real benefit is equivalent to a CPI-adjusted nominal benefit.
 
-When spouse modeling is enabled, the notebook approximates survivor benefits by keeping the higher active benefit after the first death. The deceased spouse's benefit is treated as available only if it had started before death. This is deliberately simpler than Social Security's actual survivor rules, which depend on the survivor's age, the deceased worker's claiming history, and early-claiming reductions.
+When spouse modeling is enabled, the planner approximates survivor benefits by keeping the higher active benefit after the first death. The deceased spouse's benefit is treated as available only if it had started before death. This is deliberately simpler than Social Security's actual survivor rules, which depend on the survivor's age, the deceased worker's claiming history, and early-claiming reductions.
 
 ### Pension Income
 
@@ -596,6 +596,6 @@ This retirement planner and its accompanying theoretical documentation were deve
 
 The use of AI in this project is consistent with the spirit of the tool itself: leveraging available technology to make rigorous quantitative analysis accessible to individuals without a specialised finance or programming background. All modeling decisions, parameter choices, and interpretations remain the responsibility of the human author.
 
-Users who wish to verify, critique, or extend the model are encouraged to inspect the source code directly in `retirement_planner.ipynb`, which is intentionally kept short, readable, and dependency-light.
+Users who wish to verify, critique, or extend the model are encouraged to inspect the source code directly. The Streamlit interface lives in `app.py`, optional local AI help lives in `ai_help.py`, and the calculation engine lives in `retirement_model.py` with regression tests under `tests/`.
 
-> *This document and the accompanying notebook are provided for educational and planning purposes only. Nothing here constitutes personalised financial, tax, or investment advice. Consult a qualified financial professional before making retirement planning decisions.*
+> *This document and the accompanying planner are provided for educational and planning purposes only. Nothing here constitutes personalised financial, tax, or investment advice. Consult a qualified financial professional before making retirement planning decisions.*

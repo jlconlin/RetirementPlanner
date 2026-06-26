@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+from pathlib import Path
 from typing import Any
 
 import matplotlib.pyplot as plt
@@ -79,7 +80,7 @@ VIEWS = [
     "Retirement Age",
     "Required Balance",
     "Cash Flows",
-    "Assumptions",
+    "Theory",
 ]
 
 HELP_FOCUS_ALIASES = {
@@ -142,6 +143,11 @@ def as_display_table(df: pd.DataFrame) -> pd.DataFrame:
             "balance_end": "End balance ($k)",
         }
     )
+
+
+@st.cache_data(show_spinner=False)
+def load_theory_markdown() -> str:
+    return Path("THEORY.md").read_text(encoding="utf-8")
 
 
 def load_uploaded_scenario() -> dict[str, Any] | None:
@@ -1028,9 +1034,15 @@ else:
         "Open Monte Carlo to check sequence-of-returns risk."
     )
 
-help_tab, overview_tab, mc_tab, sweep_tab, grid_tab, cashflow_tab, assumptions_tab = st.tabs(
-    VIEWS, default="Overview"
-)
+(
+    help_tab,
+    overview_tab,
+    mc_tab,
+    sweep_tab,
+    grid_tab,
+    cashflow_tab,
+    theory_tab,
+) = st.tabs(VIEWS, default="Overview")
 
 with overview_tab:
     left, right = st.columns([2, 1])
@@ -1100,17 +1112,8 @@ with cashflow_tab:
     st.subheader("Year-by-Year Cash Flows")
     st.dataframe(as_display_table(projection), hide_index=True, width="stretch")
 
-with assumptions_tab:
-    st.subheader("Current Scenario JSON")
-    st.json(scenario)
-    st.subheader("Internal Assumptions")
-    st.json(
-        {
-            key: (round(value, 6) if isinstance(value, float) else value)
-            for key, value in assumptions.items()
-            if key != "spending_params"
-        }
-    )
+with theory_tab:
+    st.markdown(load_theory_markdown())
 
 with help_tab:
     st.subheader("Input Help")
