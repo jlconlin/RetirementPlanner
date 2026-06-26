@@ -8,9 +8,9 @@ from pathlib import Path
 from typing import Any
 
 import matplotlib.pyplot as plt
-from matplotlib.ticker import AutoMinorLocator
 import numpy as np
 import pandas as pd
+import plotly.graph_objects as go
 import streamlit as st
 import streamlit.components.v1 as components
 
@@ -1491,80 +1491,81 @@ def sweep_chart(sweep: pd.DataFrame) -> plt.Figure:
     return fig
 
 
-def _balance_for_success_rate(
-    ages: list[int],
-    balances: np.ndarray,
-    grid: np.ndarray,
-    target_age: int,
-    success_rate: float,
-) -> float | None:
-    if target_age not in ages:
-        return None
-    age_idx = ages.index(target_age)
-    success_by_balance = grid[:, age_idx]
-    if success_by_balance.max() < success_rate or success_by_balance.min() > success_rate:
-        return None
-    return float(np.interp(success_rate, success_by_balance, balances))
-
-
-def grid_chart(
-    ages: list[int],
-    balances: np.ndarray,
-    grid: np.ndarray,
-    target_retirement_age: int,
-) -> plt.Figure:
-    fig, ax = plt.subplots(figsize=(10, 5.4))
-    cf = ax.contourf(
-        np.array(ages),
-        balances / 1_000,
-        grid * 100,
-        levels=np.linspace(0, 100, 21),
-        cmap="RdYlGn",
-        vmin=0,
-        vmax=100,
+def grid_chart(ages: list[int], balances: np.ndarray, grid: np.ndarray) -> go.Figure:
+    balance_k = balances / 1_000
+    success_pct = grid * 100
+    fig = go.Figure(
+        data=[
+            go.Contour(
+                x=ages,
+                y=balance_k,
+                z=success_pct,
+                colorscale="RdYlGn",
+                zmin=0,
+                zmax=100,
+                contours={
+                    "start": 0,
+                    "end": 100,
+                    "size": 5,
+                    "showlines": False,
+                },
+                colorbar={"title": "Success rate (%)"},
+                customdata=np.repeat(balance_k[:, np.newaxis], len(ages), axis=1),
+                hovertemplate=(
+                    "Retirement age: %{x}<br>"
+                    "Starting balance: $%{customdata:,.0f}k<br>"
+                    "Success rate: %{z:.1f}%"
+                    "<extra></extra>"
+                ),
+            )
+        ]
     )
-    fig.colorbar(cf, ax=ax, label="Success rate (%)")
-    if len(ages) >= 2 and len(balances) >= 2:
-        cs = ax.contour(
-            np.array(ages),
-            balances / 1_000,
-            grid * 100,
-            levels=[80, 90],
-            colors=["#111827", "#111827"],
-            linewidths=1.6,
+    for level in [80, 90]:
+        fig.add_trace(
+            go.Contour(
+                x=ages,
+                y=balance_k,
+                z=success_pct,
+                contours={
+                    "type": "constraint",
+                    "operation": "=",
+                    "value": level,
+                    "showlabels": True,
+                    "labelfont": {"size": 11, "color": "#111827"},
+                },
+                line={"color": "#111827", "width": 1.6},
+                showscale=False,
+                hoverinfo="skip",
+                name=f"{level}%",
+            )
         )
-        ax.clabel(cs, fmt="%d%%", fontsize=9)
-    target_balance = _balance_for_success_rate(
-        ages,
-        balances,
-        grid,
-        target_retirement_age,
-        0.80,
+    fig.update_layout(
+        height=560,
+        margin={"l": 70, "r": 30, "t": 20, "b": 60},
+        xaxis_title="Retirement age",
+        yaxis_title="Starting balance ($k, today's dollars)",
+        hovermode="closest",
     )
-    if target_balance is not None:
-        target_balance_k = target_balance / 1_000
-        ax.axvline(
-            target_retirement_age,
-            color="#111827",
-            linestyle="--",
-            linewidth=1.3,
-            label=f"Selected age {target_retirement_age}",
-        )
-        ax.axhline(
-            target_balance_k,
-            color="#111827",
-            linestyle="--",
-            linewidth=1.3,
-            label=f"80% balance ${target_balance_k:,.0f}k",
-        )
-    ax.set_xlabel("Retirement age")
-    ax.set_ylabel("Starting balance ($k, today's dollars)")
-    ax.xaxis.set_minor_locator(AutoMinorLocator(2))
-    ax.yaxis.set_minor_locator(AutoMinorLocator(2))
-    ax.grid(True, which="major", alpha=0.25)
-    ax.grid(True, which="minor", alpha=0.28, linewidth=0.6)
-    ax.legend(loc="best")
-    fig.tight_layout()
+    fig.update_xaxes(
+        showgrid=True,
+        gridcolor="rgba(17, 24, 39, 0.22)",
+        minor={"showgrid": True, "gridcolor": "rgba(17, 24, 39, 0.12)"},
+        showspikes=True,
+        spikemode="across",
+        spikesnap="cursor",
+        spikecolor="#111827",
+        spikethickness=1,
+    )
+    fig.update_yaxes(
+        showgrid=True,
+        gridcolor="rgba(17, 24, 39, 0.22)",
+        minor={"showgrid": True, "gridcolor": "rgba(17, 24, 39, 0.12)"},
+        showspikes=True,
+        spikemode="across",
+        spikesnap="cursor",
+        spikecolor="#111827",
+        spikethickness=1,
+    )
     return fig
 
 
@@ -1711,9 +1712,9 @@ with grid_tab:
     if not ages:
         st.info("No retirement ages available for the grid.")
     else:
-        st.pyplot(
-            grid_chart(ages, balances, grid, int(scenario["target_retirement_age"])),
-            clear_figure=True,
+        st.plotly_chart(
+            grid_chart(ages, balances, grid),
+            use_container_width=True,
         )
         st.caption("Balances are shown in today's dollars.")
         st.caption(f"Using {int(scenario['grid_sims']):,} Monte Carlo paths per grid cell.")
