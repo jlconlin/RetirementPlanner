@@ -155,7 +155,7 @@ def scenario_download(scenario: dict[str, Any]) -> None:
         data=json.dumps(scenario, indent=2),
         file_name="scenario.json",
         mime="application/json",
-        use_container_width=True,
+        width="stretch",
     )
 
 
@@ -260,6 +260,7 @@ def text_value(
     min_value: int | float = 0,
     integer: bool = False,
     help: str | None = None,
+    inline: bool = False,
 ) -> int | float:
     """Render a plain text input and return a validated numeric value."""
     text_key = f"{key}_text_only"
@@ -269,7 +270,19 @@ def text_value(
     except Exception:
         pass
 
-    text = st.text_input(label, key=text_key, help=help)
+    if inline:
+        label_col, input_col = st.columns([0.64, 0.36], vertical_alignment="center")
+        with label_col:
+            st.markdown(label)
+        with input_col:
+            text = st.text_input(
+                label,
+                key=text_key,
+                help=help,
+                label_visibility="collapsed",
+            )
+    else:
+        text = st.text_input(label, key=text_key, help=help)
     parsed = _parse_numeric(text, integer)
     if parsed is None:
         st.warning(f"'{text}' is not a valid value for {label}.")
@@ -374,18 +387,21 @@ def build_sidebar(scenario: dict[str, Any]) -> dict[str, Any]:
             float(scenario["current_savings"]),
             key="current_savings",
             help=HELP_TEXT["Current savings"],
+            inline=True,
         ))
         annual_contribution = float(text_value(
             "Annual contribution ($k)",
             float(scenario["annual_contribution"]),
             key="annual_contribution",
             help=HELP_TEXT["Annual contribution"],
+            inline=True,
         ))
         contribution_growth_rate = float(text_value(
             "Contribution growth (real %)",
             float(scenario["contribution_growth_rate"]),
             key="contribution_growth_rate",
             help=HELP_TEXT["Contribution growth"],
+            inline=True,
         ))
 
     with st.sidebar.expander("Returns", expanded=True):
@@ -820,7 +836,7 @@ with mc_tab:
         ],
         columns=["Metric", "Value"],
     )
-    st.dataframe(stats, hide_index=True, use_container_width=True)
+    st.dataframe(stats, hide_index=True, width="stretch")
 
 with sweep_tab:
     st.subheader("Success Rate by Retirement Age")
@@ -834,7 +850,7 @@ with sweep_tab:
         st.dataframe(
             sweep.assign(success_rate=lambda df: df["success_rate"].map(lambda x: f"{x:.1%}")),
             hide_index=True,
-            use_container_width=True,
+            width="stretch",
         )
 
 with grid_tab:
@@ -850,7 +866,7 @@ with grid_tab:
 
 with cashflow_tab:
     st.subheader("Year-by-Year Cash Flows")
-    st.dataframe(as_display_table(projection), hide_index=True, use_container_width=True)
+    st.dataframe(as_display_table(projection), hide_index=True, width="stretch")
 
 with assumptions_tab:
     st.subheader("Current Scenario JSON")
