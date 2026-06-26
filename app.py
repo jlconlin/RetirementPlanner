@@ -747,7 +747,7 @@ def ai_help_panel(scenario: dict[str, Any]) -> None:
         st.warning(f"Unsupported AI_HELP_PROVIDER: `{config['provider']}`")
         return
 
-    ai_header, setup_col, _ = st.columns([0.58, 0.18, 0.24], vertical_alignment="center")
+    ai_header, setup_col, _ = st.columns([0.42, 0.24, 0.34], vertical_alignment="center")
     with ai_header:
         st.subheader("Ask Local AI")
     setup_text = f"""
