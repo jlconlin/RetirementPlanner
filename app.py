@@ -1388,13 +1388,14 @@ def build_sidebar(scenario: dict[str, Any]) -> dict[str, Any]:
 
 
 @st.cache_data(show_spinner=False)
-def cached_monte_carlo(scenario_json: str, n_sims: int) -> dict[str, Any]:
+def cached_monte_carlo(scenario_json: str, n_sims: int, seed: int) -> dict[str, Any]:
     scenario = json.loads(scenario_json)
     assumptions = scenario_to_assumptions(scenario)
     return monte_carlo_summary(
         assumptions,
         retirement_age=assumptions["target_retirement_age"],
         n_sims=n_sims,
+        seed=seed,
         return_paths=True,
     )
 
@@ -1451,7 +1452,12 @@ def projection_chart(projection: pd.DataFrame, scenario: dict[str, Any]) -> plt.
     return fig
 
 
-def monte_carlo_chart(paths: np.ndarray, scenario: dict[str, Any], success_rate: float) -> plt.Figure:
+def monte_carlo_chart(
+    paths: np.ndarray,
+    scenario: dict[str, Any],
+    success_rate: float,
+    deterministic_projection: pd.DataFrame,
+) -> plt.Figure:
     ages = np.arange(scenario["current_age"] + 1, scenario["current_age"] + 1 + paths.shape[1])
     success_mask = (paths >= 0).all(axis=1)
     fig, ax = plt.subplots(figsize=(10, 5))
@@ -1466,6 +1472,14 @@ def monte_carlo_chart(paths: np.ndarray, scenario: dict[str, Any], success_rate:
     ax.fill_between(ages, p10 / 1_000, p90 / 1_000, color="#bfdbfe", alpha=0.65, label="10-90th pct")
     ax.fill_between(ages, p25 / 1_000, p75 / 1_000, color="#60a5fa", alpha=0.45, label="25-75th pct")
     ax.plot(ages, p50 / 1_000, color="#1e3a8a", linewidth=2.4, label="Median")
+    ax.plot(
+        deterministic_projection["age"] + 1,
+        deterministic_projection["balance_end"] / 1_000,
+        color="#111827",
+        linestyle="--",
+        linewidth=1.2,
+        label="Deterministic",
+    )
     ax.axhline(0, color="#b91c1c", linewidth=1)
     ax.axvline(scenario["target_retirement_age"], color="#525252", linestyle="--", linewidth=1)
     ax.set_title(f"Monte Carlo paths ({success_rate:.1%} success)")
@@ -1671,9 +1685,17 @@ with overview_tab:
             st.write(f"Earliest deterministic retirement age: **{summary.earliest_retirement_age}**")
 
 with mc_tab:
-    st.subheader("Monte Carlo Simulation")
+    mc_header, mc_action = st.columns([0.78, 0.22], vertical_alignment="center")
+    with mc_header:
+        st.subheader("Monte Carlo Simulation")
+    if "mc_seed" not in st.session_state:
+        st.session_state["mc_seed"] = 42
+    with mc_action:
+        if st.button("Re-run simulation", key="rerun_monte_carlo"):
+            st.session_state["mc_seed"] += 1
+    mc_seed = int(st.session_state["mc_seed"])
     with st.spinner("Running Monte Carlo..."):
-        mc = cached_monte_carlo(scenario_json, int(scenario["n_sims"]))
+        mc = cached_monte_carlo(scenario_json, int(scenario["n_sims"]), mc_seed)
     if mc["success_rate"] < 0.8:
         st.warning(
             "Monte Carlo success is below 80%. The average path may work, but market "
@@ -1681,10 +1703,14 @@ with mc_tab:
         )
     else:
         st.success("Monte Carlo success clears the common 80% threshold.")
-    st.pyplot(monte_carlo_chart(mc["paths"], scenario, mc["success_rate"]), clear_figure=True)
+    st.pyplot(
+        monte_carlo_chart(mc["paths"], scenario, mc["success_rate"], projection),
+        clear_figure=True,
+    )
     stats = pd.DataFrame(
         [
             ["Paths", f"{int(scenario['n_sims']):,}"],
+            ["Seed", f"{mc_seed}"],
             ["Success rate", fmt_pct(mc["success_rate"])],
             ["Median ending balance", fmt_money(mc["median_ending_balance"])],
             ["10th percentile ending balance", fmt_money(mc["p10_ending_balance"])],
