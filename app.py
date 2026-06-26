@@ -49,6 +49,32 @@ HELP_TEXT = {
 }
 
 
+MC_SIM_OPTIONS = {
+    "Quick": 500,
+    "Standard": 1_000,
+    "High confidence": 5_000,
+}
+SWEEP_SIM_OPTIONS = {
+    "Quick": 200,
+    "Standard": 500,
+    "Smoother": 1_000,
+}
+GRID_SIM_OPTIONS = {
+    "Draft": 100,
+    "Standard": 250,
+    "Detailed": 750,
+}
+VIEWS = [
+    "Overview",
+    "Monte Carlo",
+    "Retirement Age",
+    "Required Balance",
+    "Cash Flows",
+    "Assumptions",
+    "Help",
+]
+
+
 def fmt_money(value: float | None) -> str:
     if value is None:
         return "n/a"
@@ -166,12 +192,16 @@ def slider_text(
     slider_key = f"{key}_slider"
     text_key = f"{key}_text"
     slider_value = min(max(value, min_value), max_value)
+    state_initialized = False
 
     try:
         if slider_key not in st.session_state:
             st.session_state[slider_key] = slider_value
+        elif not min_value <= st.session_state[slider_key] <= max_value:
+            st.session_state[slider_key] = slider_value
         if text_key not in st.session_state:
             st.session_state[text_key] = _format_numeric(value, integer)
+        state_initialized = True
     except Exception:
         pass
 
@@ -189,16 +219,18 @@ def slider_text(
 
     slider_col, text_col = st.columns([0.68, 0.32])
     with slider_col:
-        slider_result = st.slider(
-            label,
-            min_value=min_value,
-            max_value=max_value,
-            value=slider_value,
-            step=step,
-            help=help,
-            key=slider_key,
-            on_change=sync_text_from_slider,
-        )
+        slider_kwargs = {
+            "label": label,
+            "min_value": min_value,
+            "max_value": max_value,
+            "step": step,
+            "help": help,
+            "key": slider_key,
+            "on_change": sync_text_from_slider,
+        }
+        if not state_initialized:
+            slider_kwargs["value"] = slider_value
+        slider_result = st.slider(**slider_kwargs)
     with text_col:
         text_result = st.text_input(
             "Exact value",
@@ -218,6 +250,41 @@ def slider_text(
         st.warning(f"{label} cannot be above {max_value}.")
         return slider_result
     return parsed
+
+
+def text_value(
+    label: str,
+    value: int | float,
+    *,
+    key: str,
+    min_value: int | float = 0,
+    integer: bool = False,
+    help: str | None = None,
+) -> int | float:
+    """Render a plain text input and return a validated numeric value."""
+    text_key = f"{key}_text_only"
+    try:
+        if text_key not in st.session_state:
+            st.session_state[text_key] = _format_numeric(value, integer)
+    except Exception:
+        pass
+
+    text = st.text_input(label, key=text_key, help=help)
+    parsed = _parse_numeric(text, integer)
+    if parsed is None:
+        st.warning(f"'{text}' is not a valid value for {label}.")
+        return value
+    if parsed < min_value:
+        st.warning(f"{label} cannot be below {min_value}.")
+        return value
+    return parsed
+
+
+def _option_for_value(options: dict[str, int], value: int, default: str) -> str:
+    for label, option_value in options.items():
+        if option_value == value:
+            return label
+    return default
 
 
 def build_sidebar(scenario: dict[str, Any]) -> dict[str, Any]:
@@ -302,32 +369,21 @@ def build_sidebar(scenario: dict[str, Any]) -> dict[str, Any]:
             )
 
     with st.sidebar.expander("Savings", expanded=True):
-        current_savings = float(slider_text(
+        current_savings = float(text_value(
             "Current savings ($k)",
-            0.0,
-            10_000.0,
             float(scenario["current_savings"]),
-            step=10.0,
             key="current_savings",
             help=HELP_TEXT["Current savings"],
-            allow_above_slider=True,
         ))
-        annual_contribution = float(slider_text(
+        annual_contribution = float(text_value(
             "Annual contribution ($k)",
-            0.0,
-            500.0,
             float(scenario["annual_contribution"]),
-            step=1.0,
             key="annual_contribution",
             help=HELP_TEXT["Annual contribution"],
-            allow_above_slider=True,
         ))
-        contribution_growth_rate = float(slider_text(
+        contribution_growth_rate = float(text_value(
             "Contribution growth (real %)",
-            0.0,
-            10.0,
             float(scenario["contribution_growth_rate"]),
-            step=0.25,
             key="contribution_growth_rate",
             help=HELP_TEXT["Contribution growth"],
         ))
@@ -371,15 +427,11 @@ def build_sidebar(scenario: dict[str, Any]) -> dict[str, Any]:
         ))
 
     with st.sidebar.expander("Spending", expanded=True):
-        annual_expenses = float(slider_text(
+        annual_expenses = float(text_value(
             "Annual expenses ($k)",
-            0.0,
-            500.0,
             float(scenario["annual_expenses"]),
-            step=1.0,
             key="annual_expenses",
             help=HELP_TEXT["Annual expenses"],
-            allow_above_slider=True,
         ))
         spending_model = st.radio(
             "Spending model",
@@ -411,15 +463,11 @@ def build_sidebar(scenario: dict[str, Any]) -> dict[str, Any]:
             taper_rate_pct = float(slider_text("Taper rate (%/yr)", 0.1, 10.0, float(taper_rate_pct), step=0.1, key="taper_rate_pct"))
 
     with st.sidebar.expander("Income", expanded=True):
-        social_security_monthly = float(slider_text(
+        social_security_monthly = float(text_value(
             "Social Security monthly ($k)",
-            0.0,
-            10.0,
             float(scenario["social_security_monthly"]),
-            step=0.1,
             key="social_security_monthly",
             help=HELP_TEXT["Social Security"],
-            allow_above_slider=True,
         ))
         social_security_start_age = st.radio(
             "Social Security start age",
@@ -428,14 +476,10 @@ def build_sidebar(scenario: dict[str, Any]) -> dict[str, Any]:
             horizontal=True,
         )
         if has_spouse:
-            spouse_ss_monthly = float(slider_text(
+            spouse_ss_monthly = float(text_value(
                 "Spouse SS monthly ($k)",
-                0.0,
-                10.0,
                 float(scenario.get("spouse_ss_monthly", 1.5)),
-                step=0.1,
                 key="spouse_ss_monthly",
-                allow_above_slider=True,
             ))
             spouse_ss_start_age = st.radio(
                 "Spouse SS start age",
@@ -479,17 +523,45 @@ def build_sidebar(scenario: dict[str, Any]) -> dict[str, Any]:
             pension_start_age = scenario.get("pension_start_age", 60)
 
     with st.sidebar.expander("Simulation", expanded=False):
-        n_sims = st.select_slider(
-            "Monte Carlo simulations",
-            options=[500, 1000, 2000, 5000],
-            value=int(scenario.get("n_sims", 1000)),
+        mc_choice = st.radio(
+            "Monte Carlo paths",
+            list(MC_SIM_OPTIONS),
+            index=list(MC_SIM_OPTIONS).index(
+                _option_for_value(
+                    MC_SIM_OPTIONS, int(scenario.get("n_sims", 1_000)), "Standard"
+                )
+            ),
+            format_func=lambda label: f"{label} ({MC_SIM_OPTIONS[label]:,})",
+            horizontal=True,
             help=HELP_TEXT["Monte Carlo"],
         )
-        grid_sims = st.select_slider(
-            "Grid simulations per cell",
-            options=[100, 250, 500, 1000],
-            value=250,
+        sweep_choice = st.radio(
+            "Retirement age paths per age",
+            list(SWEEP_SIM_OPTIONS),
+            index=list(SWEEP_SIM_OPTIONS).index(
+                _option_for_value(
+                    SWEEP_SIM_OPTIONS,
+                    int(scenario.get("sweep_sims", 500)),
+                    "Standard",
+                )
+            ),
+            format_func=lambda label: f"{label} ({SWEEP_SIM_OPTIONS[label]:,})",
+            horizontal=True,
         )
+        grid_choice = st.radio(
+            "Balance grid paths per cell",
+            list(GRID_SIM_OPTIONS),
+            index=list(GRID_SIM_OPTIONS).index(
+                _option_for_value(
+                    GRID_SIM_OPTIONS, int(scenario.get("grid_sims", 250)), "Standard"
+                )
+            ),
+            format_func=lambda label: f"{label} ({GRID_SIM_OPTIONS[label]:,})",
+            horizontal=True,
+        )
+        n_sims = MC_SIM_OPTIONS[mc_choice]
+        sweep_sims = SWEEP_SIM_OPTIONS[sweep_choice]
+        grid_sims = GRID_SIM_OPTIONS[grid_choice]
 
     updated = {
         "name": scenario_name,
@@ -517,6 +589,7 @@ def build_sidebar(scenario: dict[str, Any]) -> dict[str, Any]:
         "pension_monthly": pension_monthly,
         "pension_start_age": pension_start_age,
         "n_sims": n_sims,
+        "sweep_sims": sweep_sims,
         "grid_sims": grid_sims,
         "has_spouse": has_spouse,
         "spouse_age": spouse_age,
@@ -547,7 +620,7 @@ def cached_monte_carlo(scenario_json: str, n_sims: int) -> dict[str, Any]:
 
 
 @st.cache_data(show_spinner=False)
-def cached_sweep(scenario_json: str) -> pd.DataFrame:
+def cached_sweep(scenario_json: str, sweep_sims: int) -> pd.DataFrame:
     scenario = json.loads(scenario_json)
     assumptions = scenario_to_assumptions(scenario)
     start = max(assumptions["current_age"] + 1, 50)
@@ -555,7 +628,7 @@ def cached_sweep(scenario_json: str) -> pd.DataFrame:
     rows = []
     for age in range(start, end):
         rate, _ = monte_carlo_summary(
-            assumptions, retirement_age=age, n_sims=500
+            assumptions, retirement_age=age, n_sims=sweep_sims
         )["success_rate"], None
         rows.append({"retirement_age": age, "success_rate": rate})
     return pd.DataFrame(rows)
@@ -684,18 +757,14 @@ scenario_json = json.dumps(scenario, sort_keys=True)
 st.title("Retirement Planner")
 st.caption("A personal planning dashboard in today's dollars.")
 
-with st.spinner("Running Monte Carlo..."):
-    mc = cached_monte_carlo(scenario_json, int(scenario["n_sims"]))
-
-metric_cols = st.columns(5)
+metric_cols = st.columns(4)
 metric_cols[0].metric("Target retirement", summary.target_retirement_age)
 metric_cols[1].metric(
     "Earliest deterministic",
     "None" if summary.earliest_retirement_age is None else summary.earliest_retirement_age,
 )
-metric_cols[2].metric("Monte Carlo success", fmt_pct(mc["success_rate"]))
-metric_cols[3].metric("Balance at retirement", fmt_money(summary.balance_at_retirement))
-metric_cols[4].metric(
+metric_cols[2].metric("Balance at retirement", fmt_money(summary.balance_at_retirement))
+metric_cols[3].metric(
     "Depletion",
     "No depletion" if summary.depletion_age is None else f"Age {summary.depletion_age}",
 )
@@ -705,24 +774,14 @@ if summary.depletion_age is not None:
         f"Deterministic projection depletes at age {summary.depletion_age}. "
         "Try changing retirement age, spending, savings, or income assumptions."
     )
-elif mc["success_rate"] < 0.8:
-    st.warning(
-        "Monte Carlo success is below 80%. The average path may work, but market "
-        "sequence risk is material under these assumptions."
-    )
 else:
-    st.success("The plan survives the deterministic horizon and clears the common 80% Monte Carlo threshold.")
+    st.success(
+        "The deterministic projection remains solvent through the planning horizon. "
+        "Open Monte Carlo to check sequence-of-returns risk."
+    )
 
 overview_tab, mc_tab, sweep_tab, grid_tab, cashflow_tab, assumptions_tab, help_tab = st.tabs(
-    [
-        "Overview",
-        "Monte Carlo",
-        "Retirement Age",
-        "Required Balance",
-        "Cash Flows",
-        "Assumptions",
-        "Help",
-    ]
+    VIEWS
 )
 
 with overview_tab:
@@ -733,9 +792,7 @@ with overview_tab:
     with right:
         st.subheader("Key Numbers")
         st.write(f"Ending balance: **{fmt_money(summary.ending_balance)}**")
-        st.write(f"Median Monte Carlo ending balance: **{fmt_money(mc['median_ending_balance'])}**")
-        st.write(f"10th percentile ending balance: **{fmt_money(mc['p10_ending_balance'])}**")
-        st.write(f"90th percentile ending balance: **{fmt_money(mc['p90_ending_balance'])}**")
+        st.write(f"Balance at retirement: **{fmt_money(summary.balance_at_retirement)}**")
         if summary.earliest_retirement_age is None:
             st.write("No deterministic retirement age in the tested range remains solvent.")
         else:
@@ -743,9 +800,19 @@ with overview_tab:
 
 with mc_tab:
     st.subheader("Monte Carlo Simulation")
+    with st.spinner("Running Monte Carlo..."):
+        mc = cached_monte_carlo(scenario_json, int(scenario["n_sims"]))
+    if mc["success_rate"] < 0.8:
+        st.warning(
+            "Monte Carlo success is below 80%. The average path may work, but market "
+            "sequence risk is material under these assumptions."
+        )
+    else:
+        st.success("Monte Carlo success clears the common 80% threshold.")
     st.pyplot(monte_carlo_chart(mc["paths"], scenario, mc["success_rate"]), clear_figure=True)
     stats = pd.DataFrame(
         [
+            ["Paths", f"{int(scenario['n_sims']):,}"],
             ["Success rate", fmt_pct(mc["success_rate"])],
             ["Median ending balance", fmt_money(mc["median_ending_balance"])],
             ["10th percentile ending balance", fmt_money(mc["p10_ending_balance"])],
@@ -758,10 +825,11 @@ with mc_tab:
 with sweep_tab:
     st.subheader("Success Rate by Retirement Age")
     with st.spinner("Running retirement age sweep..."):
-        sweep = cached_sweep(scenario_json)
+        sweep = cached_sweep(scenario_json, int(scenario["sweep_sims"]))
     if sweep.empty:
         st.info("No retirement ages available in the sweep range.")
     else:
+        st.caption(f"Using {int(scenario['sweep_sims']):,} Monte Carlo paths per retirement age.")
         st.pyplot(sweep_chart(sweep), clear_figure=True)
         st.dataframe(
             sweep.assign(success_rate=lambda df: df["success_rate"].map(lambda x: f"{x:.1%}")),
@@ -778,6 +846,7 @@ with grid_tab:
     else:
         st.pyplot(grid_chart(ages, balances, grid), clear_figure=True)
         st.caption("Balances are shown in today's dollars.")
+        st.caption(f"Using {int(scenario['grid_sims']):,} Monte Carlo paths per grid cell.")
 
 with cashflow_tab:
     st.subheader("Year-by-Year Cash Flows")
