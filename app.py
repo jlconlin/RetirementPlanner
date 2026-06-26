@@ -40,21 +40,119 @@ st.set_page_config(
 
 
 HELP_TEXT = {
-    "Current age": "Your age today. Projections start from this age.",
-    "Life expectancy": "The age through which the plan must remain solvent. Use a conservative planning age, not a median forecast.",
-    "Target retirement age": "The age where contributions stop and portfolio withdrawals begin.",
-    "Current savings": "Investable assets today, in thousands of today's dollars. Exclude home equity unless you plan to spend it.",
-    "Annual contribution": "Total household annual savings into investment accounts, in thousands of today's dollars.",
-    "Contribution growth": "Real growth above inflation. Enter 0 if your nominal savings merely keeps pace with inflation.",
-    "Inflation": "Used to convert nominal returns into real returns. Dollar inputs remain in today's purchasing power.",
-    "Pre-retirement return": "Expected nominal return while working. The model converts it to real return internally.",
-    "Post-retirement return": "Expected nominal return after retirement, usually lower due to a more conservative allocation.",
-    "Volatility": "Annual return standard deviation used in Monte Carlo simulations.",
-    "Annual expenses": "Gross annual retirement spending before Social Security or pension offsets, in today's dollars.",
-    "Spending model": "Flat is most conservative. Three-phase and taper reduce real spending later in retirement.",
-    "Social Security": "Monthly benefit in today's dollars for the selected claiming age.",
-    "Pension": "Monthly defined-benefit pension in today's dollars, if applicable.",
-    "Monte Carlo": "Random return simulations. Deterministic results update instantly; Monte Carlo is cached but still heavier.",
+    "Current age": (
+        "Your age today — the starting point for all projections.<br><br>"
+        "<b>Range:</b> 18–90<br>"
+        "<i>Theory tab → §1.1</i>"
+    ),
+    "Life expectancy": (
+        "How long the plan must stay solvent. Use a <b>conservative</b> (longer) value — "
+        "outliving your money is catastrophic; a surplus is not.<br><br>"
+        "<b>Conservative individual planning target:</b> 90–95<br>"
+        "<b>Couples: ~50% chance one survives to 90</b><br>"
+        "<b>Median US male at 65:</b> 84 &nbsp;|&nbsp; <b>Female:</b> 87<br>"
+        "<i>Theory tab → §1.1</i>"
+    ),
+    "Target retirement age": (
+        "Age at which contributions stop and portfolio withdrawals begin.<br><br>"
+        "<b>Key ages:</b> 55 (Rule of 55), 59½ (penalty-free withdrawals), "
+        "62 (earliest SS), 65 (Medicare), 67 (SS Full Retirement Age), 70 (max SS benefit)<br>"
+        "<i>Theory tab → §1.1</i>"
+    ),
+    "Current savings": (
+        "Total investable assets today in thousands of today's dollars. "
+        "Include 401(k), IRA, and brokerage. Exclude home equity unless you plan to liquidate it.<br><br>"
+        "<b>4% rule implied portfolio target:</b> 25× annual expenses<br>"
+        "<i>Theory tab → §1.2</i>"
+    ),
+    "Annual contribution": (
+        "Total household annual savings into investment accounts, in thousands of today's dollars. "
+        "Include employer match.<br><br>"
+        "<b>2026 limits:</b> 401(k) $24,500 (+$8k catch-up age 50–59/64+; +$11,250 age 60–63); "
+        "IRA $7,500 (+$1,100 catch-up age 50+)<br>"
+        "<i>Theory tab → §1.2</i>"
+    ),
+    "Contribution growth": (
+        "Real annual growth in your contribution above inflation. "
+        "Enter 0 if your nominal savings merely keeps pace with inflation.<br><br>"
+        "<b>Stable in real terms:</b> 0% &nbsp;|&nbsp; "
+        "<b>Modest salary growth:</b> 2–4% &nbsp;|&nbsp; "
+        "<b>Aggressive growth:</b> 4–6%<br>"
+        "<i>Theory tab → §1.2</i>"
+    ),
+    "Inflation": (
+        "Expected long-run inflation rate. Converts nominal returns to real returns via the "
+        "Fisher equation. Dollar inputs are always in today's purchasing power.<br><br>"
+        "<b>Fed long-run target:</b> 2.0%<br>"
+        "<b>US historical average 1990–2024 (CPI):</b> ~2.8%<br>"
+        "<b>Conservative / elevated-inflation scenario:</b> 3.0–4.0%<br>"
+        "<i>Theory tab → §1.3, §2</i>"
+    ),
+    "Pre-retirement return": (
+        "Expected nominal annual return while working — the figure quoted on a brokerage or "
+        "fund website. Converted to real return internally via the Fisher equation.<br><br>"
+        "<b>100% equities:</b> 10–11% &nbsp;|&nbsp; <b>80/20:</b> 9–10%<br>"
+        "<b>60/40 balanced:</b> 8–9% &nbsp;|&nbsp; <b>40/60:</b> 6–8%<br>"
+        "<b>Conservative forward-looking default:</b> 7%<br>"
+        "<i>Theory tab → §1.3, §3</i>"
+    ),
+    "Post-retirement return": (
+        "Expected nominal return after retirement. Usually lower than pre-retirement due to "
+        "a more conservative allocation that reduces sequence-of-returns risk.<br><br>"
+        "<b>80/20 equities/bonds:</b> 9–10% &nbsp;|&nbsp; <b>60/40:</b> 8–9%<br>"
+        "<b>40/60:</b> 6–8% &nbsp;|&nbsp; <b>20/80 conservative:</b> 5–7%<br>"
+        "<i>Theory tab → §1.3, §4, §8</i>"
+    ),
+    "Volatility": (
+        "Annual return standard deviation used in Monte Carlo simulations. Higher values "
+        "produce more spread in outcomes — more chance of very good or very bad results.<br><br>"
+        "<b>100% equities:</b> 15–20% &nbsp;|&nbsp; <b>70/30:</b> 11–14%<br>"
+        "<b>50/50 balanced:</b> 8–11% &nbsp;|&nbsp; <b>100% bonds:</b> 5–8%<br>"
+        "<b>Default (≈60–70% equity):</b> 12%<br>"
+        "<i>Theory tab → §1.3, §7</i>"
+    ),
+    "Annual expenses": (
+        "Total annual retirement spending in today's dollars, before Social Security or pension offsets.<br><br>"
+        "<b>Replacement rate rule of thumb:</b> 70–80% of pre-retirement gross income<br>"
+        "<b>4% rule implied portfolio:</b> 25× this figure<br>"
+        "<b>Median US household in retirement (BLS 2023):</b> ~$52k/yr<br>"
+        "<i>Theory tab → §1.4</i>"
+    ),
+    "Spending model": (
+        "How real spending changes with age. <b>Flat</b> is most conservative (no decline).<br><br>"
+        "<b>Three-phase:</b> full spending → slow-go (default 80% at age 75) → no-go (default 60% at age 85)<br>"
+        "<b>Taper:</b> spending declines by a fixed % per year after a start age "
+        "(default 1.5%/yr after 75 → ~86% of base after 10 years)<br><br>"
+        "Based on Blanchett (2014) retirement spending smile research.<br>"
+        "<i>Theory tab → §1.4</i>"
+    ),
+    "Social Security": (
+        "Monthly Social Security benefit in today's dollars for the chosen claiming age. "
+        "Find your personal estimate at ssa.gov/myaccount.<br><br>"
+        "<b>Approximate monthly benefit at FRA (age 67):</b><br>"
+        "Low earner (~$30k/yr avg): $0.8–1.2k<br>"
+        "Average earner (~$60k/yr): $1.5–2.2k<br>"
+        "High earner (~$120k/yr): $2.5–3.5k &nbsp;|&nbsp; Max (2024): ~$3.8k<br><br>"
+        "<b>Claiming age vs. FRA:</b> 62: −25–30% &nbsp;|&nbsp; 67: 0% &nbsp;|&nbsp; 70: +24%<br>"
+        "<b>Break-even for delaying 67→70:</b> ~age 82–83<br>"
+        "<i>Theory tab → §1.4, §5</i>"
+    ),
+    "Pension": (
+        "Monthly defined-benefit pension in today's dollars, and the age at which it begins. "
+        "Reduces required portfolio withdrawals from that age onward.<br><br>"
+        "<b>Tip:</b> Most pension statements already quote benefits in real or COLA-adjusted terms — "
+        "enter the stated monthly amount directly.<br>"
+        "<i>Theory tab → §1.4, §5</i>"
+    ),
+    "Monte Carlo": (
+        "Number of random return sequences to simulate. More paths = higher precision, slower run.<br><br>"
+        "<b>500 paths:</b> ±1.6% precision &nbsp;|&nbsp; "
+        "<b>1,000:</b> ±1.1% &nbsp;|&nbsp; "
+        "<b>5,000:</b> ±0.5%<br>"
+        "<b>Conservative planning target:</b> ≥90% success rate<br>"
+        "<b>Moderate target:</b> ≥80% success rate<br>"
+        "<i>Theory tab → §7, §9</i>"
+    ),
 }
 
 
@@ -388,7 +486,7 @@ def focus_help_widget(selected_topic: str) -> None:
         function render(topic) {{
           if (!topics[topic]) return;
           select.value = topic;
-          info.textContent = topics[topic];
+          info.innerHTML = topics[topic];
         }}
 
         function topicForElement(element) {{

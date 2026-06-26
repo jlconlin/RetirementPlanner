@@ -42,6 +42,13 @@ This section describes every input parameter in the dashboard, gives recommended
 | Post-ret. nominal return (%) | 5.0 | 3–8 | 1.3 |
 | Return volatility σ (%) | 12.0 | 5–20 | 1.3 |
 | Annual expenses ($k) | 60 | 20–250 | 1.4 |
+| Spending model | flat | flat / three_phase / taper | 1.4 |
+| Slow-go start age | 75 | 70–80 | 1.4 |
+| Slow-go spending (%) | 80 | 70–85 | 1.4 |
+| No-go start age | 85 | 80–90 | 1.4 |
+| No-go spending (%) | 60 | 50–70 | 1.4 |
+| Taper start age | 75 | 70–80 | 1.4 |
+| Taper rate (%/yr) | 1.5 | 1–2 | 1.4 |
 | SS monthly ($k) | 1.8 | 0–4.5 | 1.4 |
 | SS start age | 67 | 62–70 | 1.4 |
 | Pension monthly ($k) | 0 | 0–10+ | 1.4 |
@@ -180,6 +187,36 @@ Rules of thumb and benchmarks:
 | Include: healthcare, travel, housing, food, taxes on withdrawals | — |
 
 Consider that expenses in early "go-go" retirement years often exceed later years, and that healthcare costs tend to rise substantially after 75.
+
+**Spending model parameters**
+
+The model supports three real-spending trajectories during retirement. The default **flat** model holds spending constant in real terms and is the most conservative choice. Two declining-spending alternatives are available, calibrated to the empirical finding that real spending tends to fall with age — the "retirement spending smile" documented by Blanchett (2014) [19].
+
+*Three-phase (go-go / slow-go / no-go)*
+
+A piecewise-constant approximation to the retirement spending lifecycle. Spending steps down at two user-specified transition ages:
+
+| Parameter | Recommended range | Default |
+|---|---|---|
+| Slow-go start age | 70–80 | 75 |
+| Slow-go spending | 70–85% of go-go | 80% |
+| No-go start age | 80–90 | 85 |
+| No-go spending | 50–70% of go-go | 60% |
+
+Research suggests the real spending decline from active to slow-go retirement is typically 10–20%, with a further 15–25% decline into no-go retirement [19]. Healthcare costs do rise sharply after age 75 — the percentages above assume the net effect is still a meaningful real-spending reduction. Users with anticipated high long-term-care costs should raise these percentages toward 90% and 75% respectively, or model healthcare separately.
+
+*Annual taper*
+
+A smooth alternative to the step-function three-phase model. Spending declines by a constant real percentage each year after a chosen start age:
+
+| Parameter | Recommended range | Default |
+|---|---|---|
+| Taper start age | 70–80 | 75 |
+| Taper rate | 1–2%/yr | 1.5%/yr |
+
+A 1.5%/yr taper produces spending of approximately 86% of the initial level after 10 years and 74% after 20 years — broadly consistent with the Blanchett spending smile [19]. Rates above 2%/yr are aggressive and best reserved for scenarios where healthcare costs are budgeted separately.
+
+**Note:** All three models apply to *gross* expenses before subtracting Social Security and pension income. Survivor spending (when a spouse dies) is applied on top of the age-adjusted amount.
 
 **Social Security monthly ($k)**
 Your expected monthly Social Security retirement benefit for the claiming age you select, in thousands of today's dollars. The most reliable source is your personalised estimate at [ssa.gov/myaccount](https://ssa.gov/myaccount).
