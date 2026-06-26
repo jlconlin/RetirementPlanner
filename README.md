@@ -4,7 +4,7 @@ A personal retirement planning dashboard. Adjust assumptions with sliders,
 review deterministic and Monte Carlo results, inspect retirement-age sweeps,
 and save or load scenario JSON files.
 
-[![Deploy on Streamlit Community Cloud](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](https://share.streamlit.io/)
+[![Open App](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](https://retirementplanner.conlin.io)
 
 ---
 
