@@ -26,6 +26,9 @@ DEFAULT_SCENARIO: dict[str, Any] = {
     "post_retirement_return": 5.0,
     "return_volatility": 12.0,
     "annual_expenses": 60.0,
+    "spending_is_after_tax": True,
+    "tax_mode": "none",
+    "retirement_effective_tax_rate": 15.0,
     "spending_model": "flat",
     "slow_go_age": 75,
     "slow_go_pct": 80.0,
@@ -93,6 +96,12 @@ def scenario_to_assumptions(scenario: dict[str, Any]) -> dict[str, Any]:
         ),
         "return_volatility": float(s["return_volatility"]) / 100,
         "annual_expenses": float(s["annual_expenses"]) * 1_000,
+        "spending_is_after_tax": bool(s.get("spending_is_after_tax", True)),
+        "tax_mode": s.get("tax_mode", "none"),
+        "retirement_effective_tax_rate": min(
+            max(float(s.get("retirement_effective_tax_rate", 15.0)) / 100, 0.0),
+            0.95,
+        ),
         "spending_model": s.get("spending_model", "flat"),
         "spending_params": {
             "slow_go_age": int(s.get("slow_go_age", 75)),
@@ -139,6 +148,21 @@ def spending_curve(base_expenses: float, age: int, assumptions: dict[str, Any]) 
             )
         return base_expenses
     return base_expenses
+
+
+def portfolio_withdrawal_need(
+    spending_need: float, income_offsets: float, assumptions: dict[str, Any]
+) -> tuple[float, float]:
+    """Return gross portfolio withdrawal and estimated tax for a spending gap."""
+    after_tax_gap = max(spending_need - income_offsets, 0.0)
+    if (
+        assumptions.get("tax_mode") == "simple_effective"
+        and assumptions.get("spending_is_after_tax", True)
+    ):
+        tax_rate = min(max(assumptions.get("retirement_effective_tax_rate", 0.0), 0.0), 0.95)
+        gross_withdrawal = after_tax_gap / (1 - tax_rate)
+        return gross_withdrawal, gross_withdrawal - after_tax_gap
+    return after_tax_gap, 0.0
 
 
 def project_portfolio(
@@ -244,11 +268,16 @@ def project_portfolio(
         balance_start = balance
         in_withdrawal = self_retired or not self_alive
         if in_withdrawal:
-            withdrawal = max(effective_expenses - ss_income - pension_income, 0)
+            withdrawal, tax_estimate = portfolio_withdrawal_need(
+                effective_expenses,
+                ss_income + pension_income,
+                assumptions,
+            )
             balance -= withdrawal
             contrib_this_year = 0
         else:
             withdrawal = 0
+            tax_estimate = 0
             balance += contribution
             contrib_this_year = contribution
             contribution *= 1 + assumptions["contribution_growth_rate"]
@@ -264,6 +293,8 @@ def project_portfolio(
                 "contribution": contrib_this_year,
                 "ss_income": ss_income,
                 "pension_income": pension_income,
+                "spending_need": effective_expenses,
+                "tax_estimate": tax_estimate,
                 "withdrawal": withdrawal,
                 "growth": growth,
                 "balance_end": balance,
@@ -379,11 +410,10 @@ def mc_success_grid(
                 and curr_age >= assumptions["pension_start_age"]
                 else 0
             )
-            withdrawals[yr] = max(
-                spending_curve(assumptions["annual_expenses"], curr_age, assumptions)
-                - ss
-                - pension,
-                0,
+            withdrawals[yr], _ = portfolio_withdrawal_need(
+                spending_curve(assumptions["annual_expenses"], curr_age, assumptions),
+                ss + pension,
+                assumptions,
             )
 
         if inflation_rate > 0 and base_age is not None:

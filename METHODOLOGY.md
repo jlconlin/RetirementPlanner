@@ -175,7 +175,7 @@ With σ = 12% and a 4.4% real mean return, approximately 68% of simulated annual
 ### 1.4 Spending and Income
 
 **Annual expenses ($k)**
-Total annual living costs in today's purchasing power, in thousands. This is the gross spending target — the total amount needed to cover all living expenses regardless of income source. Social Security and pension income reduce the required portfolio withdrawal (see Section 4), but the expense figure itself should reflect your actual anticipated lifestyle cost.
+Total annual living costs in today's purchasing power, in thousands. This is the spending target before subtracting Social Security or pension income. If the value represents after-tax spending, the optional tax estimate can gross up portfolio withdrawals to account for taxes due on traditional retirement-account withdrawals.
 
 Rules of thumb and benchmarks:
 
@@ -184,7 +184,7 @@ Rules of thumb and benchmarks:
 | Standard "replacement rate" target | 70–80% of pre-retirement gross income |
 | 4% rule implied portfolio size | 25× annual expenses |
 | Median US household spending in retirement (BLS, 2023) | ~$52,000/yr |
-| Include: healthcare, travel, housing, food, taxes on withdrawals | — |
+| Include: healthcare, travel, housing, food | — |
 
 Consider that expenses in early "go-go" retirement years often exceed later years, and that healthcare costs tend to rise substantially after 75.
 
@@ -217,6 +217,23 @@ A smooth alternative to the step-function three-phase model. Spending declines b
 A 1.5%/yr taper produces spending of approximately 86% of the initial level after 10 years and 74% after 20 years — broadly consistent with the Blanchett spending smile [19]. Rates above 2%/yr are aggressive and best reserved for scenarios where healthcare costs are budgeted separately.
 
 **Note:** All three models apply to *gross* expenses before subtracting Social Security and pension income. Survivor spending (when a spouse dies) is applied on top of the age-adjusted amount.
+
+**Tax estimate**
+
+The planner supports a simple effective-tax estimate for portfolio withdrawals. When tax mode is set to **Simple effective rate** and annual expenses are marked as after-tax spending, the model first computes the after-tax portfolio-funded spending gap:
+
+```
+after_tax_gap = max(spending_need - Social Security - pension, 0)
+```
+
+It then grosses up that gap by the selected effective tax rate:
+
+```
+gross_withdrawal = after_tax_gap / (1 - effective_tax_rate)
+estimated_tax = gross_withdrawal - after_tax_gap
+```
+
+For example, an $80k after-tax gap with a 20% effective tax rate requires a $100k gross portfolio withdrawal and implies $20k of estimated tax. The gross-up applies only to the portfolio-funded gap. Social Security and pension entries are treated as income offsets in today's dollars and are not separately tax-modeled.
 
 **Social Security monthly ($k)**
 Your expected monthly Social Security retirement benefit for the claiming age you select, in thousands of today's dollars. The most reliable source is your personalised estimate at [ssa.gov/myaccount](https://ssa.gov/myaccount).
@@ -533,12 +550,13 @@ The following simplifications are built into the current model. Each is a candid
 
 ### Taxes
 
-The model treats `annual_expenses` as the amount needed **after tax**. It does not model:
+The model can apply a simple effective-tax gross-up to portfolio withdrawals, but it is not a full tax engine. It does not model:
 
 - Required Minimum Distributions (RMDs) from traditional IRA/401(k) accounts
 - The tax treatment of Roth vs. traditional withdrawals
 - Capital gains taxes on taxable account withdrawals
 - The impact of provisional income on Social Security benefit taxation
+- Federal or state tax brackets, standard deductions, credits, IRMAA, or ACA subsidy cliffs
 
 For a more accurate model, accounts should be segregated by tax treatment and a withdrawal sequencing strategy should be specified [17].
 

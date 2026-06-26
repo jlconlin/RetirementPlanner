@@ -13,6 +13,7 @@ from retirement_model import (
     scenario_to_assumptions,
     scenario_with_defaults,
     spending_curve,
+    portfolio_withdrawal_need,
 )
 
 
@@ -27,6 +28,9 @@ def zero_return_assumptions(**overrides):
         "post_retirement_return": 0.0,
         "return_volatility": 0.0,
         "annual_expenses": 30_000.0,
+        "spending_is_after_tax": True,
+        "tax_mode": "none",
+        "retirement_effective_tax_rate": 0.0,
         "spending_model": "flat",
         "spending_params": {},
         "social_security_monthly": 0.0,
@@ -63,6 +67,9 @@ def test_scenario_to_assumptions_converts_k_and_percent_units():
     assert assumptions["current_savings"] == 250_000
     assert assumptions["annual_contribution"] == 15_000
     assert assumptions["annual_expenses"] == 60_000
+    assert assumptions["spending_is_after_tax"] is True
+    assert assumptions["tax_mode"] == "none"
+    assert assumptions["retirement_effective_tax_rate"] == 0.15
     assert assumptions["social_security_monthly"] == 1_800
     assert assumptions["contribution_growth_rate"] == 0.02
     assert math.isclose(assumptions["pre_retirement_return"], (1.07 / 1.025) - 1)
@@ -122,6 +129,41 @@ def test_spending_curve_three_phase_and_taper():
     )
     assert spending_curve(100_000, 74, taper) == 100_000
     assert math.isclose(spending_curve(100_000, 77, taper), 100_000 * 0.98**2)
+
+
+def test_portfolio_withdrawal_need_grosses_up_after_tax_gap():
+    assumptions = zero_return_assumptions(
+        tax_mode="simple_effective",
+        spending_is_after_tax=True,
+        retirement_effective_tax_rate=0.20,
+    )
+
+    withdrawal, tax = portfolio_withdrawal_need(100_000, 20_000, assumptions)
+
+    assert withdrawal == 100_000
+    assert tax == 20_000
+
+
+def test_portfolio_projection_includes_tax_estimate_when_enabled():
+    assumptions = zero_return_assumptions(
+        current_age=60,
+        life_expectancy=62,
+        current_savings=200_000,
+        annual_contribution=0,
+        annual_expenses=80_000,
+        social_security_monthly=0,
+        target_retirement_age=60,
+        tax_mode="simple_effective",
+        spending_is_after_tax=True,
+        retirement_effective_tax_rate=0.20,
+    )
+
+    projection = project_portfolio(assumptions, retirement_age=60)
+
+    assert projection["spending_need"].tolist() == [80_000, 80_000]
+    assert projection["tax_estimate"].tolist() == [20_000, 20_000]
+    assert projection["withdrawal"].tolist() == [100_000, 100_000]
+    assert projection["balance_end"].tolist() == [100_000, 0]
 
 
 def test_survivor_does_not_receive_unclaimed_future_spousal_ss():

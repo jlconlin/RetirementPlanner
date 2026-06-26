@@ -158,11 +158,22 @@ INPUT_HELP = {
     },
     "Annual expenses": {
         "summary": "Total annual retirement spending before Social Security or pension offsets.",
-        "guidance": "Enter spending in today's dollars. Include taxes, healthcare, housing, travel, and recurring household costs.",
+        "guidance": "Enter spending in today's dollars. If you enter take-home spending, enable the tax estimate so portfolio withdrawals are grossed up.",
         "benchmarks": [
             "Replacement-rate rule of thumb: 70-80% of pre-retirement gross income",
             "4% rule implied portfolio: 25x this figure",
             "Median US household spending in retirement, BLS 2023: about $52k/year",
+        ],
+        "methodology": "§1.4",
+    },
+    "Taxes": {
+        "summary": "A simple estimate for taxes due on portfolio withdrawals.",
+        "guidance": "Use this when your spending number is an after-tax need but some retirement withdrawals will come from traditional 401(k) or IRA accounts.",
+        "benchmarks": [
+            "Ignore taxes: preserves the original planner behavior",
+            "Simple effective rate: grosses up only the portfolio-funded spending gap",
+            "Common rough planning rates: 10-25%, depending on income, account mix, deductions, and state taxes",
+            "This is a planning estimate, not a tax return calculation",
         ],
         "methodology": "§1.4",
     },
@@ -302,6 +313,8 @@ HELP_FOCUS_ALIASES = {
     "Post-retirement return": "Post-retirement return",
     "Return volatility": "Volatility",
     "Annual expenses": "Annual expenses",
+    "Tax treatment": "Taxes",
+    "Estimated retirement tax rate": "Taxes",
     "Spending model": "Spending model",
     "Social Security monthly": "Social Security",
     "Spouse SS monthly": "Social Security",
@@ -331,6 +344,8 @@ def as_display_table(df: pd.DataFrame) -> pd.DataFrame:
         "contribution",
         "ss_income",
         "pension_income",
+        "spending_need",
+        "tax_estimate",
         "withdrawal",
         "growth",
         "balance_end",
@@ -345,7 +360,9 @@ def as_display_table(df: pd.DataFrame) -> pd.DataFrame:
             "contribution": "Contribution ($k)",
             "ss_income": "Social Security ($k)",
             "pension_income": "Pension ($k)",
-            "withdrawal": "Withdrawal ($k)",
+            "spending_need": "Spending need ($k)",
+            "tax_estimate": "Estimated tax ($k)",
+            "withdrawal": "Portfolio withdrawal ($k)",
             "growth": "Growth ($k)",
             "balance_end": "End balance ($k)",
         }
@@ -1097,6 +1114,39 @@ def build_sidebar(scenario: dict[str, Any]) -> dict[str, Any]:
             taper_start_age = int(slider_text("Taper starts", 60, 95, int(taper_start_age), key="taper_start_age"))
             taper_rate_pct = float(slider_text("Taper rate (%/yr)", 0.1, 10.0, float(taper_rate_pct), step=0.1, key="taper_rate_pct"))
 
+    with st.sidebar.expander("Taxes", expanded=False):
+        spending_is_after_tax = st.checkbox(
+            "Annual expenses are after-tax spending",
+            value=bool(scenario.get("spending_is_after_tax", True)),
+            help=help_tooltip("Taxes"),
+            on_change=set_help_topic,
+            args=("Taxes",),
+        )
+        tax_mode = st.radio(
+            "Tax treatment",
+            ["none", "simple_effective"],
+            index=["none", "simple_effective"].index(
+                scenario.get("tax_mode", "none")
+            ),
+            format_func={
+                "none": "Ignore taxes",
+                "simple_effective": "Simple effective rate",
+            }.get,
+            help=help_tooltip("Taxes"),
+            on_change=set_help_topic,
+            args=("Taxes",),
+        )
+        retirement_effective_tax_rate = float(text_value(
+            "Estimated retirement tax rate (%)",
+            float(scenario.get("retirement_effective_tax_rate", 15.0)),
+            key="retirement_effective_tax_rate",
+            help=help_tooltip("Taxes"),
+            help_topic="Taxes",
+            inline=True,
+        ))
+        if tax_mode == "simple_effective" and not spending_is_after_tax:
+            st.caption("Gross spending mode does not apply a withdrawal tax gross-up.")
+
     with st.sidebar.expander("Income", expanded=True):
         social_security_monthly = float(text_value(
             "Social Security monthly ($k)",
@@ -1216,6 +1266,9 @@ def build_sidebar(scenario: dict[str, Any]) -> dict[str, Any]:
         "post_retirement_return": post_retirement_return,
         "return_volatility": return_volatility,
         "annual_expenses": annual_expenses,
+        "spending_is_after_tax": spending_is_after_tax,
+        "tax_mode": tax_mode,
+        "retirement_effective_tax_rate": retirement_effective_tax_rate,
         "spending_model": spending_model,
         "slow_go_age": slow_go_age,
         "slow_go_pct": slow_go_pct,
@@ -1439,6 +1492,19 @@ else:
         "The deterministic projection remains solvent through the planning horizon. "
         "Open Monte Carlo to check sequence-of-returns risk."
     )
+
+retired_projection = projection[projection["retired"]]
+if not retired_projection.empty and assumptions.get("tax_mode") == "simple_effective":
+    first_retired_year = retired_projection.iloc[0]
+    if first_retired_year["tax_estimate"] > 0:
+        spending_need = fmt_money(first_retired_year["spending_need"]).replace("$", "\\$")
+        tax_estimate = fmt_money(first_retired_year["tax_estimate"]).replace("$", "\\$")
+        withdrawal = fmt_money(first_retired_year["withdrawal"]).replace("$", "\\$")
+        st.info(
+            "Tax estimate enabled: first retirement year after-tax spending need is "
+            f"{spending_need}, estimated withdrawal tax is {tax_estimate}, and gross "
+            f"portfolio withdrawal is {withdrawal}."
+        )
 
 (
     help_tab,
