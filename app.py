@@ -661,6 +661,10 @@ def focus_help_widget(selected_topic: str, show_selector: bool = True) -> None:
         .help-shell {{
           font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
           color: rgb(49, 51, 63);
+          box-sizing: border-box;
+          max-height: 100%;
+          overflow-y: auto;
+          padding-right: 0.15rem;
         }}
         label {{
           display: block;
@@ -736,7 +740,7 @@ def focus_help_widget(selected_topic: str, show_selector: bool = True) -> None:
         }}
         </style>
         """,
-        height=340,
+        height=430,
     )
 
 
@@ -787,6 +791,7 @@ def ai_help_panel(scenario: dict[str, Any]) -> None:
         height=90,
         key="ai_help_question",
     )
+    st.caption("Press Cmd+Enter to ask on Mac, or Ctrl+Enter on Windows/Linux.")
 
     if st.button("Ask AI", type="primary"):
         with st.spinner("Asking local Ollama..."):
@@ -801,6 +806,37 @@ def ai_help_panel(scenario: dict[str, Any]) -> None:
             except AIHelpError as exc:
                 st.session_state["ai_help_error"] = str(exc)
                 st.session_state.pop("ai_help_answer", None)
+
+    components.html(
+        """
+        <script>
+        try {
+          const parentDoc = window.parent.document;
+          const listenerKey = "__retirementPlannerAiShortcut";
+          if (!parentDoc[listenerKey]) {
+            parentDoc[listenerKey] = true;
+            parentDoc.addEventListener("keydown", (event) => {
+              if (!(event.metaKey || event.ctrlKey) || event.key !== "Enter") return;
+              const target = event.target;
+              if (!target || target.getAttribute("aria-label") !== "Question") return;
+
+              const askButton = Array.from(parentDoc.querySelectorAll("button"))
+                .find((button) => button.textContent.trim() === "Ask AI");
+              if (!askButton) return;
+
+              event.preventDefault();
+              target.dispatchEvent(new Event("input", { bubbles: true }));
+              target.dispatchEvent(new Event("change", { bubbles: true }));
+              window.setTimeout(() => askButton.click(), 30);
+            }, true);
+          }
+        } catch (error) {
+          // The Ask AI button remains the reliable fallback.
+        }
+        </script>
+        """,
+        height=0,
+    )
 
     if st.session_state.get("ai_help_error"):
         st.error(st.session_state["ai_help_error"])
