@@ -38,8 +38,141 @@ st.set_page_config(
     page_title="Retirement Planner",
     page_icon="",
     layout="wide",
-    initial_sidebar_state="expanded",
+    initial_sidebar_state="collapsed",
 )
+
+
+def inject_mobile_css() -> None:
+    st.markdown(
+        """
+        <style>
+        /* ── Reduce top padding on small screens ── */
+        @media (max-width: 768px) {
+            .block-container {
+                padding-top: 1rem !important;
+                padding-left: 0.75rem !important;
+                padding-right: 0.75rem !important;
+            }
+        }
+
+        /* ── Hide native tab bar on mobile (replaced by JS select dropdown) ── */
+        @media (max-width: 768px) {
+            [data-testid="stTabs"] [role="tablist"] {
+                display: none !important;
+            }
+        }
+
+        /* ── Metric values: prevent overflow ── */
+        @media (max-width: 768px) {
+            [data-testid="stMetric"] {
+                overflow-wrap: break-word;
+                word-break: break-word;
+            }
+            [data-testid="stMetricValue"] {
+                font-size: 1.1rem !important;
+            }
+            [data-testid="stMetricLabel"] {
+                font-size: 0.72rem !important;
+            }
+        }
+
+        /* ── Sidebar: larger tap targets for sliders and inputs ── */
+        @media (max-width: 768px) {
+            [data-testid="stSidebar"] input[type="range"] {
+                height: 2rem;
+            }
+            [data-testid="stSidebar"] input[type="text"],
+            [data-testid="stSidebar"] input[type="number"] {
+                min-height: 2.5rem;
+                font-size: 1rem !important;
+            }
+        }
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
+def inject_mobile_tab_nav() -> None:
+    """On narrow viewports, replace the cramped tab bar with a <select> dropdown."""
+    components.html(
+        """
+        <script>
+        (function () {
+            var doc = window.parent.document;
+            var SELECT_ID = 'mobile-tab-select';
+            var BREAKPOINT = 768;
+
+            function isMobile() {
+                return window.parent.innerWidth <= BREAKPOINT;
+            }
+
+            function getTabButtons() {
+                var tabList = doc.querySelector('[data-testid="stTabs"] [role="tablist"]');
+                return tabList ? Array.from(tabList.querySelectorAll('button[role="tab"]')) : [];
+            }
+
+            function syncSelect() {
+                var sel = doc.getElementById(SELECT_ID);
+                if (!sel) return;
+                getTabButtons().forEach(function (btn, i) {
+                    if (btn.getAttribute('aria-selected') === 'true') sel.value = String(i);
+                });
+            }
+
+            function buildSelect() {
+                if (!isMobile()) return;
+                var tabs = getTabButtons();
+                if (!tabs.length) return;
+
+                if (doc.getElementById(SELECT_ID)) {
+                    syncSelect();
+                    return;
+                }
+
+                var tabList = doc.querySelector('[data-testid="stTabs"] [role="tablist"]');
+                if (!tabList) return;
+
+                var sel = doc.createElement('select');
+                sel.id = SELECT_ID;
+                sel.style.cssText = [
+                    'width:100%', 'box-sizing:border-box',
+                    'padding:0.6rem 0.75rem', 'margin-bottom:0.5rem',
+                    'font-size:1rem', 'font-family:inherit',
+                    'border:1px solid #d1d5db', 'border-radius:0.5rem',
+                    'background:#fff', 'cursor:pointer',
+                ].join(';');
+
+                tabs.forEach(function (btn, i) {
+                    var opt = doc.createElement('option');
+                    opt.value = String(i);
+                    opt.textContent = btn.textContent.trim();
+                    if (btn.getAttribute('aria-selected') === 'true') opt.selected = true;
+                    sel.appendChild(opt);
+                });
+
+                sel.addEventListener('change', function () {
+                    var current = getTabButtons();
+                    var target = current[parseInt(this.value)];
+                    if (target) target.click();
+                });
+
+                tabList.parentNode.insertBefore(sel, tabList);
+            }
+
+            var debounce;
+            new MutationObserver(function () {
+                clearTimeout(debounce);
+                debounce = setTimeout(buildSelect, 80);
+            }).observe(doc.body, { childList: true, subtree: true });
+
+            setTimeout(buildSelect, 600);
+        })();
+        </script>
+        """,
+        height=0,
+        scrolling=False,
+    )
 
 
 METHODOLOGY_SECTIONS = {
@@ -558,7 +691,7 @@ def slider_text(
             st.session_state[slider_key] = parsed
         set_help_topic(help_topic or label)
 
-    slider_col, text_col = st.columns([0.68, 0.32])
+    slider_col, text_col = st.columns([0.62, 0.38])
     with slider_col:
         slider_kwargs = {
             "label": label,
@@ -1587,6 +1720,7 @@ def grid_chart(ages: list[int], balances: np.ndarray, grid: np.ndarray) -> go.Fi
     return fig
 
 
+inject_mobile_css()
 scenario = build_sidebar(init_scenario())
 assumptions = scenario_to_assumptions(scenario)
 projection = project_portfolio(assumptions, assumptions["target_retirement_age"])
@@ -1624,14 +1758,15 @@ with header_link:
         unsafe_allow_html=True,
     )
 
-metric_cols = st.columns(4)
-metric_cols[0].metric("Target retirement", summary.target_retirement_age)
-metric_cols[1].metric(
+metric_row1 = st.columns(2)
+metric_row1[0].metric("Target retirement", summary.target_retirement_age)
+metric_row1[1].metric(
     "Earliest deterministic",
     "None" if summary.earliest_retirement_age is None else summary.earliest_retirement_age,
 )
-metric_cols[2].metric("Balance at retirement", fmt_money(summary.balance_at_retirement))
-metric_cols[3].metric(
+metric_row2 = st.columns(2)
+metric_row2[0].metric("Balance at retirement", fmt_money(summary.balance_at_retirement))
+metric_row2[1].metric(
     "Depletion",
     "No depletion" if summary.depletion_age is None else f"Age {summary.depletion_age}",
 )
@@ -1669,6 +1804,7 @@ if not retired_projection.empty and assumptions.get("tax_mode") == "simple_effec
     cashflow_tab,
     methodology_tab,
 ) = st.tabs(VIEWS, default="Overview")
+inject_mobile_tab_nav()
 
 with overview_tab:
     left, right = st.columns([2, 1])
